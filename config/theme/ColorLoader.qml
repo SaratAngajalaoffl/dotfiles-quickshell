@@ -57,6 +57,17 @@ QtObject {
         onLoadFailed: root.loaded = false
     }
 
+    // theme-set.sh repoints the `current` symlink instead of editing this file
+    // in place, so the watched inode never changes and no change event fires.
+    // The shell calls this over IPC after a switch. Reloading the FileView by
+    // toggling the path forces a fresh read of the new target.
+    function forceReload() {
+        if (!file.path)
+            return
+        file.path = ""
+        file.path = Quickshell.env("HOME") + "/.config/theme/current/quickshell-colors.json"
+    }
+
     function parse(raw) {
         if (!raw || raw.trim() === "")
             return

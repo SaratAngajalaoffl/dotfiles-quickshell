@@ -1,11 +1,11 @@
-// Right notch: status cluster + popup triggers.
+// Right notch: system tray + status indicators + popup triggers.
 //
-// Chunk 1 scope: the triggers and layout. Each indicator is a placeholder
-// until its service lands in Chunk 3 — the wiring (which popup, which hover)
-// is final so later chunks only fill in the readouts.
+// Every readout is backed by a real service now (Chunk 3), replacing the
+// placeholders from Chunk 1.
 import QtQuick
 import "../../theme"
 import "../../state"
+import "../../services"
 import "../../components"
 
 Row {
@@ -14,32 +14,74 @@ Row {
     spacing: 4
 
     // ── System tray ─────────────────────────────────────────────────────────
-    // Placeholder until Chunk 3 wires Quickshell.Services.SystemTray.
-    Item {
-        width: 0
-        height: 0
-    }
+    SysTray {}
+
+    // ── Media ───────────────────────────────────────────────────────────────
+    Media {}
 
     // ── Audio ───────────────────────────────────────────────────────────────
     BarTrigger {
-        glyph: "\uf028"
-        label: "--%"
-        active: ShellState.audioOpen
+        glyph: AudioService.glyph
+        label: AudioService.muted ? "muted" : AudioService.volumePercent + "%"
+        active: ShellState.audioOpen || ShellState.audioTriggerHovered
         onTriggered: ShellState.toggle("audio")
+
+        HoverHandler {
+            id: audioHover
+            onHoveredChanged: ShellState.audioTriggerHovered = hovered
+        }
     }
 
     // ── Network ─────────────────────────────────────────────────────────────
     BarTrigger {
-        glyph: "\uf6ff"
+        glyph: NetworkService.glyph
+        glyphColor: NetworkService.color
         active: ShellState.networkOpen
         onTriggered: ShellState.toggle("network")
     }
 
     // ── Bluetooth ───────────────────────────────────────────────────────────
     BarTrigger {
-        glyph: "\uf293"
+        glyph: BluetoothService.glyph
+        glyphColor: BluetoothService.color
         active: ShellState.bluetoothOpen
         onTriggered: ShellState.toggle("bluetooth")
+    }
+
+    // ── Brightness ──────────────────────────────────────────────────────────
+    // Hidden entirely on machines with no backlight (this desktop).
+    BarTrigger {
+        visible: BrightnessService.available
+        glyph: BrightnessService.glyph
+        label: BrightnessService.percent + "%"
+        onTriggered: { /* no popup yet — brightness is a scroll/keys target */ }
+
+        WheelHandler {
+            onWheel: function (e) { BrightnessService.adjust(e.angleDelta.y > 0 ? 5 : -5) }
+        }
+    }
+
+    // ── Battery (hidden on desktops) ────────────────────────────────────────
+    BarTrigger {
+        visible: BatteryService.visible
+        glyph: BatteryService.glyph
+        glyphColor: BatteryService.color
+        label: BatteryService.percent + "%"
+        onTriggered: { /* power popup lands with the dashboard */ }
+    }
+
+    // ── Dashboard (calendar / pomodoro / customise) ────────────────────────
+    BarTrigger {
+        glyph: "\uf00a"
+        active: ShellState.dashboardOpen
+        onTriggered: ShellState.toggle("dashboard")
+    }
+
+    // ── Wallpaper ───────────────────────────────────────────────────────────
+    BarTrigger {
+        glyph: "\uf03e"
+        active: ShellState.wallpaperOpen
+        onTriggered: ShellState.toggle("wallpaper")
     }
 
     // ── Clipboard ───────────────────────────────────────────────────────────
@@ -68,9 +110,7 @@ Row {
             onTriggered: ShellState.toggle("notifications")
         }
 
-        // Badge is wired in Chunk 4; count stays 0 until NotificationService
-        // exists, so the layout is already correct.
-        property int unread: 0
+        property int unread: NotificationService.unreadCount
 
         Rectangle {
             visible: parent.unread > 0

@@ -1,0 +1,247 @@
+// One notification card.
+//
+// Three affordances, per the requirement that nothing disappears on its own:
+//   ✓  mark read   — clears the unread badge, keeps the card in the panel
+//   ✕  delete      — removes it entirely
+//   actions        — invoke the notification's own buttons
+//
+// Restored (persisted) notifications have no live handle, so actions and
+// delete are hidden for them rather than failing silently.
+import QtQuick
+import Quickshell.Services.Notifications
+import "../theme"
+import "../services"
+import "../components"
+
+Item {
+    id: card
+
+    required property var entry        // plain object from NotificationService
+    required property bool isLive
+
+    readonly property bool unread: !entry.read
+
+    signal markRead()
+    signal remove()
+    signal action(string actionId)
+
+    implicitHeight: row.implicitHeight + 20
+
+    // Unread cards get a subtle wash + accent rail.
+    Rectangle {
+        anchors.fill: parent
+        color: card.unread ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.06)
+                           : "transparent"
+    }
+
+    Rectangle {
+        anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
+        width: 3
+        visible: card.unread
+        color: card.urgencyColor
+    }
+
+    readonly property color urgencyColor: {
+        switch (entry.urgency) {
+            case NotificationUrgency.Critical: return Theme.urgent
+            case NotificationUrgency.Low:      return Theme.inactive
+            default:                           return Theme.accent
+        }
+    }
+
+    Row {
+        id: row
+        anchors {
+            left: parent.left;  leftMargin: 12
+            right: parent.right; rightMargin: 8
+            top: parent.top;    topMargin: 10
+        }
+        spacing: 10
+        height: Math.max(iconArea.height, textCol.implicitHeight)
+
+        // ── App icon or letter fallback ─────────────────────────────────────
+        Item {
+            id: iconArea
+            width: 32
+            height: 32
+
+            Image {
+                id: iconImg
+                anchors.fill: parent
+                source: {
+                    var ic = card.entry.appIcon || ""
+                    if (ic === "") return ""
+                    if (ic.startsWith("/")) return "file://" + ic
+                    return "image://icon/" + ic
+                }
+                sourceSize.width: 32
+                sourceSize.height: 32
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                visible: status === Image.Ready
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: Theme.hover
+                visible: iconImg.status !== Image.Ready
+
+                Text {
+                    anchors.centerIn: parent
+                    text: (card.entry.appName || "?").charAt(0).toUpperCase()
+                    color: Theme.text
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 14
+                    font.bold: true
+                }
+            }
+        }
+
+        // ── Text ────────────────────────────────────────────────────────────
+        Column {
+            id: textCol
+            width: row.width - iconArea.width - buttons.width - row.spacing * 2
+            spacing: 3
+
+            Text {
+                width: parent.width
+                visible: text !== ""
+                text: card.entry.appName || ""
+                color: Theme.subtext0
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeSmall
+                elide: Text.ElideRight
+            }
+
+            Text {
+                width: parent.width
+                visible: text !== ""
+                text: card.entry.summary || ""
+                color: Theme.text
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeLarge
+                font.bold: true
+                wrapMode: Text.WordWrap
+                maximumLineCount: 2
+                elide: Text.ElideRight
+            }
+
+            Text {
+                width: parent.width
+                visible: text !== ""
+                text: card.entry.body || ""
+                color: Theme.subtext1
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSize
+                wrapMode: Text.WordWrap
+                maximumLineCount: 4
+                elide: Text.ElideRight
+                textFormat: Text.StyledText
+            }
+
+            // Action buttons
+            Row {
+                spacing: 6
+                visible: card.isLive && (card.entry.actions || []).length > 0
+
+                Repeater {
+                    model: card.isLive ? (card.entry.actions || []) : []
+
+                    delegate: Rectangle {
+                        required property var modelData
+                        width:  actionLabel.width + 20
+                        height: 22
+                        radius: 4
+                        color: actHover.hovered
+                               ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.28)
+                               : Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14)
+
+                        Behavior on color { ColorAnimation { duration: 100 } }
+
+                        Text {
+                            id: actionLabel
+                            anchors.centerIn: parent
+                            text: modelData.text || ""
+                            color: Theme.text
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.fontSizeSmall
+                        }
+
+                        HoverHandler { id: actHover; cursorShape: Qt.PointingHandCursor }
+                        TapHandler { onTapped: card.action(modelData.id) }
+                    }
+                }
+            }
+        }
+
+        // ── Controls ────────────────────────────────────────────────────────
+        Row {
+            id: buttons
+            spacing: 2
+
+            // Mark read — only meaningful while unread and live.
+            CardButton {
+                visible: card.unread && card.isLive
+                glyph: "\uf00c"
+                tip: "Mark as read"
+                onActivated: card.markRead()
+            }
+
+            // Delete — always available for live entries.
+            CardButton {
+                visible: card.isLive
+                glyph: "\uf00d"
+                tip: "Delete"
+                danger: true
+                onActivated: card.remove()
+            }
+
+            // Restored entries can only be cleared from the list.
+            CardButton {
+                visible: !card.isLive
+                glyph: "\uf00d"
+                tip: "Remove from history"
+                danger: true
+                onActivated: card.remove()
+            }
+        }
+    }
+
+    // ── Small round button ──────────────────────────────────────────────────
+    component CardButton: Item {
+        id: btn
+
+        property string glyph
+        property string tip
+        property bool   danger: false
+
+        signal activated()
+
+        width: 24
+        height: 24
+
+        Rectangle {
+            anchors.fill: parent
+            radius: width / 2
+            color: btnHover.hovered
+                   ? (btn.danger ? Qt.rgba(Theme.urgent.r, Theme.urgent.g, Theme.urgent.b, 0.22)
+                                 : Theme.hover)
+                   : "transparent"
+            Behavior on color { ColorAnimation { duration: 100 } }
+        }
+
+        Text {
+            anchors.centerIn: parent
+            text: btn.glyph
+            color: btn.danger && btnHover.hovered ? Theme.urgent : Theme.subtext0
+            font.family: Theme.fontFamily
+            font.pixelSize: 11
+        }
+
+        HoverHandler { id: btnHover; cursorShape: Qt.PointingHandCursor }
+        TapHandler { onTapped: btn.activated() }
+    }
+
+    HoverHandler { id: cardHover }
+}

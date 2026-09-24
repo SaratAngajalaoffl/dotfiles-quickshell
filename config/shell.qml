@@ -7,8 +7,14 @@ import Quickshell
 import QtQuick
 import "windows"
 import "shapes"
+import "services"
+import "popups"
 
 ShellRoot {
+    // Force-instantiate the singleton that registers the IPC handlers, so
+    // `qs ipc call theme reload` works even before any popup is opened.
+    property var _ipc: Ipc
+
     Variants {
         model: Quickshell.screens
 
@@ -16,9 +22,11 @@ ShellRoot {
             Scope {
                 required property var modelData
 
-                TopBar        { screen: modelData }
+                TopBar { id: topBar; screen: modelData }
                 FrameShape    { screen: modelData }
                 PopupDismiss  { screen: modelData }
+
+                PopupLayer { barWindow: topBar; screen: modelData }
             }
         }
     }

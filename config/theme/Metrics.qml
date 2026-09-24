@@ -9,6 +9,7 @@ QtObject {
     // ── Frame / bar geometry ────────────────────────────────────────────────
     property int borderWidth: 6      // thickness of the screen frame
     property int cornerRadius: 17    // outer frame corner
+    property int cornerRadiusSmall: 10
     property int notchRadius: 15     // notch bottom corners
     property int notchHeight: 40
     property int exclusionGap: 34    // reserved space under the bar
@@ -26,6 +27,7 @@ QtObject {
 
     // ── Popup sizing ────────────────────────────────────────────────────────
     property int popupPadding: 16
+    property int popupWidth: 400
     property int dashboardWidth: 900
     property int dashboardHeight: 520
     property int notificationsWidth: 400
@@ -34,6 +36,9 @@ QtObject {
     property int launcherMaxHeight: 420
     property int emojiWidth: 360
     property int emojiMaxHeight: 400
+    property int wallpaperWidth: 460
+    property int spotifyWidth: 420
+    property int wallpaperMaxHeight: 520
 
     // ── Workspace pills ─────────────────────────────────────────────────────
     property int wsDotSize: 10

@@ -1,0 +1,148 @@
+// IPC surface: `qs ipc call theme reload`, etc.
+//
+// Needed because theme-set.sh replaces the `~/.config/theme/current` symlink
+// rather than editing the palette file in place. FileView watches the resolved
+// inode, so repointing the symlink fires no change event and the shell would
+// never repaint. theme-set.sh calls this after switching, which forces a
+// re-read.
+pragma Singleton
+import QtQuick
+import Quickshell
+import Quickshell.Io
+import "../theme"
+import "../state"
+import "../services"
+
+QtObject {
+    // Force the palette to be re-read from disk.
+    function reloadTheme(): string {
+        Colors.reloadTheme()
+        return "theme reloaded"
+    }
+
+    function closeAllPopups(): string {
+        ShellState.closeAll()
+        return "closed"
+    }
+
+    function togglePopup(name: string): string {
+        ShellState.toggle(name)
+        return name
+    }
+
+    // Handlers live as children so they are instantiated with the singleton.
+    property IpcHandler _theme: IpcHandler {
+        target: "theme"
+        function reload(): string { return reloadTheme() }
+        function current(): string { return Colors.mode }
+    }
+
+    property IpcHandler _popups: IpcHandler {
+        target: "popups"
+        function closeAll(): string { return closeAllPopups() }
+        function toggle(name: string): string { return togglePopup(name) }
+    }
+
+    // Spotify, for scripting and diagnostics.
+    property IpcHandler _spotify: IpcHandler {
+        target: "spotify"
+        function status(): string {
+            return JSON.stringify({
+                running: SpotifyService.running,
+                state: SpotifyService.state,
+                title: SpotifyService.title,
+                artist: SpotifyService.artist,
+                progress: SpotifyService.progress
+            })
+        }
+        function playlists(): string { return String(SpotifyService.playlists.length) }
+        function results(): string { return String(SpotifyService.results.length) }
+        function search(q: string): string { SpotifyService.search(q); return "searching" }
+        function toggle(): string { SpotifyService.toggle(); return "toggled" }
+    }
+
+    // Settings + pomodoro + calendar, for scripting and diagnostics.
+    property IpcHandler _settings: IpcHandler {
+        target: "settings"
+        function get(): string { return JSON.stringify(SettingsService.snapshot()) }
+        function set(key: string, value: string): string {
+            var v = value
+            if (value === "true") v = true
+            else if (value === "false") v = false
+            else if (!isNaN(Number(value))) v = Number(value)
+            SettingsService[key] = v
+            SettingsService.commit()
+            return key + "=" + v
+        }
+        function reset(): string { SettingsService.reset(); return "reset" }
+    }
+
+    property IpcHandler _pomodoro: IpcHandler {
+        target: "pomodoro"
+        function status(): string {
+            return JSON.stringify({
+                phase: PomodoroService.phase,
+                remaining: PomodoroService.remaining,
+                running: PomodoroService.running,
+                completed: PomodoroService.completed,
+                clock: PomodoroService.clock
+            })
+        }
+        function start(): string { PomodoroService.start(); return "started" }
+        function pause(): string { PomodoroService.pause(); return "paused" }
+        function reset(): string { PomodoroService.reset(); return "reset" }
+        function skip(): string { PomodoroService.skip(); return "skipped" }
+        function setPhase(p: string): string { PomodoroService.setPhase(p); return p }
+    }
+
+    property IpcHandler _calendar: IpcHandler {
+        target: "calendar"
+        function title(): string { return CalendarService.title }
+        function cells(): string { return String(CalendarService.cells.length) }
+        function weeks(): string { return String(CalendarService.rows()) }
+        function firstWeek(): string { return String(CalendarService.firstWeekNumber) }
+    }
+
+    // Wallpaper control (diagnostics + scripting).
+    property IpcHandler _wallpaper: IpcHandler {
+        target: "wallpaper"
+        function count(): string { return String(WallpaperService.images.length) }
+        function current(): string { return WallpaperService.current }
+        function set(path: string): string { WallpaperService.apply(path); return path }
+        function first(): string {
+            return WallpaperService.images.length > 0 ? WallpaperService.images[0].path : "(none)"
+        }
+        function reload(): string { WallpaperService.refresh(); return "loading" }
+        function transition(t: string): string { WallpaperService.transition = t; return t }
+    }
+
+    // App index introspection (diagnostics).
+    property IpcHandler _apps: IpcHandler {
+        target: "apps"
+        function count(): string { return String(AppService.apps.length) }
+        function loaded(): string { return AppService.loaded ? "yes" : "no" }
+        function first(): string {
+            return AppService.apps.length > 0 ? AppService.apps[0].name : "(none)"
+        }
+        function reload(): string { AppService.load(); return "loading" }
+    }
+
+    // Notification store control from scripts/scripts/CLI.
+    property IpcHandler _notifs: IpcHandler {
+        target: "notifications"
+        function count(): string { return String(NotificationService.active.length) }
+        function unread(): string { return String(NotificationService.unreadCount) }
+        function markAllRead(): string {
+            NotificationService.markAllRead()
+            return "ok"
+        }
+        function clearAll(): string {
+            NotificationService.clearAll()
+            return "ok"
+        }
+        function toggleDnd(): string {
+            NotificationService.dnd = !NotificationService.dnd
+            return NotificationService.dnd ? "on" : "off"
+        }
+    }
+}

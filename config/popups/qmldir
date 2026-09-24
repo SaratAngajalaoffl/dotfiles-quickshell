@@ -1,0 +1,14 @@
+PopupLayer 1.0 PopupLayer.qml
+NotificationsPopup 1.0 NotificationsPopup.qml
+NotificationCard 1.0 NotificationCard.qml
+NotificationToast 1.0 NotificationToast.qml
+AudioPopup 1.0 AudioPopup.qml
+NetworkPopup 1.0 NetworkPopup.qml
+BluetoothPopup 1.0 BluetoothPopup.qml
+EmojiPopup 1.0 EmojiPopup.qml
+ClipboardPopup 1.0 ClipboardPopup.qml
+AppLauncherPopup 1.0 AppLauncherPopup.qml
+UserMenuPopup 1.0 UserMenuPopup.qml
+WallpaperPopup 1.0 WallpaperPopup.qml
+Dashboard 1.0 Dashboard.qml
+SpotifyPopup 1.0 SpotifyPopup.qml

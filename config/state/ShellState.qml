@@ -23,6 +23,10 @@ QtObject {
     property bool spotifyOpen:       false
     property bool calendarOpen:      false
 
+    // Toasts are not part of the one-popup-at-a-time set: a toast can be on
+    // screen while the notifications panel is open.
+    property bool notificationToastOpen: false
+
     // Which dashboard tab is showing.
     property string dashboardTab: "home"
 

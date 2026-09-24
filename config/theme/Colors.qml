@@ -13,6 +13,11 @@ QtObject {
 
     property ColorLoader _loader: ColorLoader {}
 
+    // Called over IPC by theme-set.sh after it repoints the active-theme symlink.
+    function reloadTheme() {
+        _loader.forceReload()
+    }
+
     // ── Raw palette ─────────────────────────────────────────────────────────
     property color rosewater: _loader.rosewater
     property color flamingo:  _loader.flamingo

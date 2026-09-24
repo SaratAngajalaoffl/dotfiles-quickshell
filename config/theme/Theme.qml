@@ -30,6 +30,11 @@ QtObject {
     property color overlay2:  Colors.overlay2
     property color overlay1:  Colors.overlay1
     property color overlay0:  Colors.overlay0
+    // Bare `surface` is the general "recessed control" fill (slider tracks,
+    // chips, thumbnails). surface0/1/2 are the raw palette steps; this is the
+    // one most widgets actually want, and it was missing — every use site was
+    // silently binding an undefined colour.
+    property color surface:   Colors.surface0
     property color surface2:  Colors.surface2
     property color surface1:  Colors.surface1
     property color surface0:  Colors.surface0
@@ -76,6 +81,10 @@ QtObject {
     property int rNotchMaxWidth: Metrics.rNotchMaxWidth
 
     property int popupPadding:      Metrics.popupPadding
+    property int popupWidth:        Metrics.popupWidth
+    property int wallpaperWidth:    Metrics.wallpaperWidth
+    property int spotifyWidth:      Metrics.spotifyWidth
+    property int cornerRadiusSmall: Metrics.cornerRadiusSmall
     property int dashboardWidth:    Metrics.dashboardWidth
     property int dashboardHeight:   Metrics.dashboardHeight
     property int notificationsWidth: Metrics.notificationsWidth

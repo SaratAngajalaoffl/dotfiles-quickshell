@@ -36,29 +36,62 @@ QtObject {
         return out
     }
 
+    // True when `screen` is the monitor Hyprland currently has focused.
+    //
+    // Popups are instantiated per monitor (one PopupLayer per Scope), so
+    // without this check every popup would appear on BOTH displays at once.
+    function isFocused(screen) {
+        if (!screen)
+            return false
+        var mon = Hyprland.monitorFor(screen)
+        if (!mon)
+            return false
+        var focused = Hyprland.focusedMonitor
+        return focused ? focused === mon : false
+    }
+
     // ── Runtime config writes ───────────────────────────────────────────────
-    // One Process reused for every write; commands are queued by reassigning
-    // and restarting, which is enough for UI-speed interactions.
+    // A SINGLE Process with a real queue.
+    //
+    // The obvious implementation (reassign `command` then restart) is lossy:
+    // applyHyprland() issues ~10 writes back to back, each assignment
+    // overwrites the previous command before it has run, and only the last one
+    // ever executes. So writes go into `_queue` and the next one is only
+    // started from onExited.
+    property var _queue: []
+    property bool _busy: false
+
     property Process _proc: Process {
-        id: proc
         onExited: function (code) {
             if (code !== 0)
-                console.warn("hyprctl eval failed:", code)
+                console.warn("hyprctl failed:", code)
+            root._busy = false
+            root._drain()
         }
+    }
+
+    function _enqueue(argv) {
+        root._queue.push(argv)
+        root._drain()
+    }
+
+    function _drain() {
+        if (root._busy || root._queue.length === 0)
+            return
+        root._busy = true
+        var next = root._queue.shift()
+        root._proc.command = next
+        root._proc.running = true
     }
 
     // Emit Lua for the non-legacy parser, falling back to keywords for
     // hyprlang configs so this file works on either setup.
     function evalLua(code) {
-        proc.command = ["hyprctl", "eval", code]
-        proc.running = false
-        proc.running = true
+        _enqueue(["hyprctl", "eval", code])
     }
 
     function keyword(name, value) {
-        proc.command = ["hyprctl", "keyword", name, value]
-        proc.running = false
-        proc.running = true
+        _enqueue(["hyprctl", "keyword", name, value])
     }
 
     // ── Named setters used by the Customise tab ─────────────────────────────
