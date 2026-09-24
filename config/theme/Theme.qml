@@ -82,17 +82,28 @@ QtObject {
 
     property int popupPadding:      Metrics.popupPadding
     property int popupWidth:        Metrics.popupWidth
-    property int wallpaperWidth:    Metrics.wallpaperWidth
     property int spotifyWidth:      Metrics.spotifyWidth
     property int cornerRadiusSmall: Metrics.cornerRadiusSmall
-    property int dashboardWidth:    Metrics.dashboardWidth
-    property int dashboardHeight:   Metrics.dashboardHeight
     property int notificationsWidth: Metrics.notificationsWidth
     property int networkPopupWidth: Metrics.networkPopupWidth
     property int launcherWidth:     Metrics.launcherWidth
     property int launcherMaxHeight: Metrics.launcherMaxHeight
     property int emojiWidth:        Metrics.emojiWidth
     property int emojiMaxHeight:    Metrics.emojiMaxHeight
+
+    property int ccWidth:         Metrics.ccWidth
+    property int ccHeight:        Metrics.ccHeight
+    property int ccPadding:       Metrics.ccPadding
+    property int ccRadius:        Metrics.ccRadius
+    property int ccCardRadius:    Metrics.ccCardRadius
+    property int ccMorphDuration: Metrics.ccMorphDuration
+
+    property int islandTop:           Metrics.islandTop
+    property int islandRestHeight:    Metrics.islandRestHeight
+    property int islandPeekWidth:     Metrics.islandPeekWidth
+    property int islandPeekHeight:    Metrics.islandPeekHeight
+    property int islandRadius:        Metrics.islandRadius
+    property int islandMorphDuration: Metrics.islandMorphDuration
 
     property int wsDotSize:     Metrics.wsDotSize
     property int wsActiveWidth: Metrics.wsActiveWidth

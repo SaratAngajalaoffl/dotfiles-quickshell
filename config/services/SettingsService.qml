@@ -45,6 +45,8 @@ QtObject {
     // Consumed directly by Metrics/Theme at runtime.
     property int    barHeight: 40
     property int    animDuration: 320
+    // Control center opens on hover of the notch (true) or on click (false).
+    property bool   ccOpenOnHover: false
 
     // ── Applying ────────────────────────────────────────────────────────────
 
@@ -95,7 +97,8 @@ QtObject {
             backgroundOpacity: root.backgroundOpacity,
             fontSize: root.fontSize,
             barHeight: root.barHeight,
-            animDuration: root.animDuration
+            animDuration: root.animDuration,
+            ccOpenOnHover: root.ccOpenOnHover
         }
     }
 
@@ -143,6 +146,7 @@ QtObject {
         animationsEnabled = true; gapsIn = 5; gapsOut = 10; rounding = 10
         cursorTrail = 3; backgroundOpacity = 0.85; fontSize = 12
         barHeight = 40; animDuration = 320
+        ccOpenOnHover = false
         commit()
     }
 

@@ -1,7 +1,6 @@
-// Date + time. Click opens the calendar dashboard tab.
+// Date + time, plus a pomodoro ring while a session runs.
 import QtQuick
 import "../../theme"
-import "../../state"
 import "../../services"
 
 Row {
@@ -47,9 +46,6 @@ Row {
                 ctx.stroke()
             }
         }
-
-        HoverHandler { cursorShape: Qt.PointingHandCursor }
-        TapHandler { onTapped: ShellState.open("dashboard", "home") }
     }
 
     property date now: new Date()
@@ -76,14 +72,5 @@ Row {
         font.pixelSize: Theme.fontSizeLarge
         font.bold: true
         anchors.verticalCenter: parent.verticalCenter
-    }
-
-    HoverHandler {
-        id: hover
-        cursorShape: Qt.PointingHandCursor
-    }
-
-    TapHandler {
-        onTapped: ShellState.open("dashboard", "calendar")
     }
 }

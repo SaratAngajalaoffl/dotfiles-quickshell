@@ -12,6 +12,7 @@ import Quickshell.Io
 import "../theme"
 import "../state"
 import "../services"
+import "../widgets"
 
 QtObject {
     // Force the palette to be re-read from disk.
@@ -56,6 +57,27 @@ QtObject {
         target: "popups"
         function closeAll(): string { return closeAllPopups() }
         function toggle(name: string): string { return togglePopup(name) }
+    }
+
+    // The center island: open a widget straight from a keybind, e.g.
+    // `qs ipc call island toggle launcher`. Ids come from widgets/Registry.qml;
+    // "home" is the grid of all of them.
+    property IpcHandler _island: IpcHandler {
+        target: "island"
+        function open(widget: string): string {
+            if (!Registry.find(widget)) return "unknown widget: " + widget
+            ShellState.openWidget(widget, false)
+            return widget
+        }
+        function toggle(widget: string): string {
+            if (!Registry.find(widget)) return "unknown widget: " + widget
+            ShellState.toggleWidget(widget)
+            return widget
+        }
+        function close(): string { ShellState.closeAll(); return "closed" }
+        function list(): string {
+            return Registry.widgets.map(function (w) { return w.id }).join("\n")
+        }
     }
 
     // Theme list + switching, so scripts stop needing a rofi dmenu.

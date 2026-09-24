@@ -1,7 +1,8 @@
-// Network popup: wifi toggle, current connection, and a scan list.
+// Network page: Ethernet and Wi-Fi tiles (the round glyph or the tile toggles
+// each link), then the available Wi-Fi networks while Wi-Fi is on.
 //
-// network list is populated on demand — scanNetworks() kicks off nmcli and the
-// model fills on the next poll, so the popup asks for a scan each time it opens.
+// The network list is populated on demand — scanNetworks() kicks off nmcli —
+// so the page asks for a scan when it opens and when Wi-Fi is switched on.
 import QtQuick
 import "../theme"
 import "../state"
@@ -10,6 +11,9 @@ import "../components"
 
 Item {
     id: root
+
+    // Shown as a control-center page rather than a standalone popup.
+    property bool embedded: false
 
     implicitWidth: Theme.popupWidth
     implicitHeight: panel.implicitHeight
@@ -22,152 +26,236 @@ Item {
         }
     }
 
+    Connections {
+        target: NetworkService
+        function onWifiEnabledChanged() {
+            if (NetworkService.wifiEnabled && ShellState.networkOpen)
+                NetworkService.scanNetworks()
+        }
+    }
+
+    // The connected network, matched by SSID too: nmcli lists one row per
+    // access point and the service keeps the first per name, which need not
+    // be the "in use" one.
+    function isCurrent(n) {
+        return n.inUse || (NetworkService.wifiConnected && n.ssid === NetworkService.wifiSsid)
+    }
+
+    // Connected network first, then by signal.
+    readonly property var networks: {
+        var list = NetworkService.networks.map(function (n) {
+            return { ssid: n.ssid, security: n.security, strength: n.strength,
+                     inUse: root.isCurrent(n) }
+        })
+        list.sort(function (a, b) {
+            if (a.inUse !== b.inUse) return a.inUse ? -1 : 1
+            return b.strength - a.strength
+        })
+        return list
+    }
+
     PopupPanel {
         id: panel
+        embedded: root.embedded
+        title: "Network"
         width: parent.width
-
-        customHeader: Item {
-            width: parent.width
-
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: "Network"
-                color: Theme.text
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeLarge
-                font.bold: true
-            }
-
-            IconButton {
-                anchors { right: parent.right; verticalCenter: parent.verticalCenter }
-                glyph: NetworkService.wifiEnabled ? "\uf1eb" : "\uf05e"
-                size: 28
-                active: !NetworkService.wifiEnabled
-                onActivated: NetworkService.toggleWifi()
-            }
-        }
 
         Column {
             width: parent.width
-            spacing: 8
+            spacing: 12
+            topPadding: 12
 
-            // ── Connected state ─────────────────────────────────────────────
-            Rectangle {
+            // ── Link tiles ──────────────────────────────────────────────────
+            Row {
                 width: parent.width
-                height: connCol.implicitHeight + 20
-                radius: Theme.cornerRadiusSmall
-                color: Theme.hover
-                visible: NetworkService.connected
+                spacing: 10
 
-                Column {
-                    id: connCol
-                    anchors {
-                        left: parent.left;  leftMargin: 12
-                        right: parent.right; rightMargin: 12
-                        verticalCenter: parent.verticalCenter
-                    }
-                    spacing: 2
+                readonly property real tileWidth: (width - spacing) / 2
 
-                    Text {
-                        width: parent.width
-                        text: NetworkService.ssid
-                        color: Theme.text
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.fontSize
-                        font.bold: true
-                        elide: Text.ElideRight
+                QuickTile {
+                    width: parent.tileWidth
+                    glyph: "\udb80\ude00"                     // md-ethernet
+                    title: "Ethernet"
+                    subtitle: {
+                        if (NetworkService.ethDevice === "") return "No adapter"
+                        if (!NetworkService.ethConnected) return "Off"
+                        return NetworkService.kind === "ethernet" && NetworkService.ip !== ""
+                               ? NetworkService.ip : "Connected"
                     }
-
-                    Text {
-                        width: parent.width
-                        text: (NetworkService.ip !== "" ? NetworkService.ip + "  ·  " : "")
-                              + NetworkService.kind
-                              + "  ·  " + NetworkService.strength + "%"
-                        color: Theme.subtext0
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.fontSizeSmall
-                        elide: Text.ElideRight
-                    }
+                    active: NetworkService.ethConnected
+                    onToggled: NetworkService.toggleEthernet()
+                    onOpened: NetworkService.toggleEthernet()
                 }
 
-                Row {
-                    anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
-                    spacing: 4
-
-                    SmallAction {
-                        label: "Disconnect"
-                        onActivated: NetworkService.disconnect()
+                QuickTile {
+                    width: parent.tileWidth
+                    glyph: "\uf1eb"
+                    title: "Wi-Fi"
+                    subtitle: {
+                        if (!NetworkService.wifiEnabled) return "Off"
+                        return NetworkService.wifiConnected ? NetworkService.wifiSsid : "Not connected"
                     }
+                    active: NetworkService.wifiEnabled
+                    onToggled: NetworkService.toggleWifi()
+                    onOpened: NetworkService.toggleWifi()
                 }
             }
 
-            // ── Scan list ───────────────────────────────────────────────────
-            SectionLabel {
-                text: !NetworkService.wifiEnabled ? "Wi-Fi is off"
-                    : NetworkService.networks.length === 0 ? "Scanning…"
-                    : "Available networks"
+            // ── Wi-Fi networks ──────────────────────────────────────────────
+            Item {
+                width: parent.width
+                height: 22
+                visible: NetworkService.wifiEnabled
+
+                Text {
+                    anchors { left: parent.left; leftMargin: 4; verticalCenter: parent.verticalCenter }
+                    text: "Wi-Fi networks"
+                    color: Theme.subtext0
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSizeSmall
+                }
+
+                Rectangle {
+                    anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                    width: scanText.implicitWidth + 16
+                    height: 22
+                    radius: height / 2
+                    color: scanHover.hovered ? Theme.hover : "transparent"
+
+                    Text {
+                        id: scanText
+                        anchors.centerIn: parent
+                        text: NetworkService._netPollRunning ? "Scanning…" : "Rescan"
+                        color: Theme.subtext0
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSizeSmall
+                    }
+
+                    HoverHandler { id: scanHover; cursorShape: Qt.PointingHandCursor }
+                    TapHandler { onTapped: NetworkService.scanNetworks() }
+                }
             }
 
             Column {
                 width: parent.width
-                spacing: 2
+                spacing: 6
+                visible: NetworkService.wifiEnabled
 
                 Repeater {
-                    model: NetworkService.wifiEnabled ? NetworkService.networks : []
-
-                    delegate: ListRow {
-                        required property var modelData
-                        title: modelData.ssid || "Hidden"
-                        subtitle: modelData.security || "Open"
-                        selected: modelData.ssid === NetworkService.ssid
-                        trailing: modelData.strength + "%"
-                        glyph: modelData.strength > 75 ? "\uf1eb"
-                             : modelData.strength > 40 ? "\uf1eb" : "\uf1eb"
-                        onActivated: NetworkService.connect(modelData.ssid, "")
-                    }
+                    model: root.networks
+                    delegate: NetworkRow {}
                 }
-            }
-
-            Item {
-                width: parent.width
-                height: 60
-                visible: NetworkService.wifiEnabled && NetworkService.networks.length === 0
 
                 Text {
-                    anchors.centerIn: parent
-                    text: "Scanning for networks…"
+                    visible: root.networks.length === 0
+                    width: parent.width
+                    height: 60
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    text: "Looking for networks…"
                     color: Theme.subtext0
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSize
                 }
             }
+
+            Text {
+                visible: !NetworkService.wifiEnabled
+                width: parent.width
+                height: 80
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                text: "Turn on Wi-Fi to see networks"
+                color: Theme.subtext0
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSize
+            }
         }
     }
 
-    component SmallAction: Rectangle {
-        id: act
-        property string label
-        signal activated()
-        width: labelText.width + 18
-        height: 24
-        radius: height / 2
-        color: actHover.hovered ? Theme.hover : "transparent"
-        Text {
-            id: labelText
-            anchors.centerIn: parent
-            text: act.label
-            color: Theme.subtext0
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
-        }
-        HoverHandler { id: actHover; cursorShape: Qt.PointingHandCursor }
-        TapHandler { onTapped: act.activated() }
-    }
+    // One network: signal glyph, name + security, lock and signal strength.
+    // Clicking a network that isn't the current one connects to it.
+    component NetworkRow: Rectangle {
+        id: row
 
-    component SectionLabel: Text {
-        color: Theme.subtext0
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.fontSizeSmall
-        font.bold: true
+        required property var modelData
+        readonly property bool current: modelData.inUse
+        readonly property bool secured: modelData.security !== "" && modelData.security !== "--"
+
+        width: parent ? parent.width : 0
+        height: 48
+        radius: Theme.cornerRadiusSmall + 2
+        color: row.current ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14)
+             : rowHover.hovered ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
+             : Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.045)
+        border.width: 1
+        border.color: row.current ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.35)
+                                  : Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.06)
+
+        Behavior on color { ColorAnimation { duration: Theme.animFast } }
+
+        // Signal strength as glyph brightness: one glyph, dimmer when weak.
+        CenteredIcon {
+            id: signal
+            anchors { left: parent.left; leftMargin: 14; verticalCenter: parent.verticalCenter }
+            text: "\uf1eb"
+            size: 16
+            color: row.current ? Theme.accent
+                 : Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b,
+                           0.35 + 0.65 * Math.min(1, row.modelData.strength / 80))
+        }
+
+        Column {
+            anchors {
+                left: signal.right; leftMargin: 12
+                right: trailing.left; rightMargin: 10
+                verticalCenter: parent.verticalCenter
+            }
+            spacing: 1
+
+            Text {
+                width: parent.width
+                text: row.modelData.ssid
+                color: Theme.text
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSize
+                font.bold: row.current
+                elide: Text.ElideRight
+            }
+            Text {
+                width: parent.width
+                text: row.current ? "Connected"
+                                  : (row.secured ? row.modelData.security : "Open")
+                color: row.current ? Theme.accent : Theme.subtext0
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeSmall
+                elide: Text.ElideRight
+            }
+        }
+
+        Row {
+            id: trailing
+            anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter }
+            spacing: 10
+
+            CenteredIcon {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: row.secured
+                text: "\uf023"                                    // lock
+                size: 11
+                color: Theme.subtext0
+            }
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: row.modelData.strength + "%"
+                color: Theme.subtext0
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeSmall
+            }
+        }
+
+        HoverHandler { id: rowHover; cursorShape: row.current ? Qt.ArrowCursor : Qt.PointingHandCursor }
+        TapHandler { onTapped: if (!row.current) NetworkService.connect(row.modelData.ssid, "") }
     }
 }

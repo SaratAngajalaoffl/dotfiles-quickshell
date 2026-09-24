@@ -7,9 +7,6 @@ NetworkPopup 1.0 NetworkPopup.qml
 BluetoothPopup 1.0 BluetoothPopup.qml
 EmojiPopup 1.0 EmojiPopup.qml
 ClipboardPopup 1.0 ClipboardPopup.qml
-AppLauncherPopup 1.0 AppLauncherPopup.qml
-UserMenuPopup 1.0 UserMenuPopup.qml
-WallpaperPopup 1.0 WallpaperPopup.qml
-Dashboard 1.0 Dashboard.qml
 SpotifyPopup 1.0 SpotifyPopup.qml
-ThemePopup 1.0 ThemePopup.qml
+ControlCenter 1.0 ControlCenter.qml
+ControlCenterMain 1.0 ControlCenterMain.qml

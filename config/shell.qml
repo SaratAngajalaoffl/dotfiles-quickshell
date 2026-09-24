@@ -27,6 +27,7 @@ ShellRoot {
                 PopupDismiss  { screen: modelData }
 
                 PopupLayer { barWindow: topBar; screen: modelData }
+                Island        { screen: modelData }
             }
         }
     }

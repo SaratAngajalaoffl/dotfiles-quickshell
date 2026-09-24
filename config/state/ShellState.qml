@@ -10,26 +10,30 @@ QtObject {
 
     // ── Popups ──────────────────────────────────────────────────────────────
     // Exactly one of these is true at a time (enforced by open()).
-    property bool launcherOpen:      false
     property bool notificationsOpen: false
     property bool audioOpen:         false
     property bool bluetoothOpen:     false
     property bool networkOpen:       false
     property bool clipboardOpen:     false
     property bool emojiOpen:         false
-    property bool userMenuOpen:      false
-    property bool dashboardOpen:     false
-    property bool wallpaperOpen:     false
     property bool spotifyOpen:       false
-    property bool calendarOpen:      false
-    property bool themeOpen:         false
+    property bool controlCenterOpen: false
 
     // Toasts are not part of the one-popup-at-a-time set: a toast can be on
     // screen while the notifications panel is open.
     property bool notificationToastOpen: false
 
-    // Which dashboard tab is showing.
-    property string dashboardTab: "home"
+    // Which control-center page is showing: "main" or one of the _ccPages.
+    property string ccPage: "main"
+
+    // ── Island (the center pill) ────────────────────────────────────────────
+    // Open means it has morphed into a widget. `islandWidget` is a Registry
+    // id, or "home" for the grid of every widget. `islandFromHome` records
+    // whether the current widget was picked from that grid, so Escape goes
+    // back to it rather than closing a widget a keybind opened directly.
+    property bool   islandOpen:     false
+    property string islandWidget:   "home"
+    property bool   islandFromHome: false
 
     // ── Transient state ─────────────────────────────────────────────────────
     // Collapses the bar to an edge strip, for fullscreen-ish focus.
@@ -41,25 +45,80 @@ QtObject {
     property bool userTriggerHovered:        false
 
     readonly property var _all: ({
-        launcher:      "launcherOpen",
         notifications: "notificationsOpen",
         audio:         "audioOpen",
         bluetooth:     "bluetoothOpen",
         network:       "networkOpen",
         clipboard:     "clipboardOpen",
         emoji:         "emojiOpen",
-        userMenu:      "userMenuOpen",
-        dashboard:     "dashboardOpen",
-        wallpaper:     "wallpaperOpen",
         spotify:       "spotifyOpen",
-        calendar:      "calendarOpen",
-        theme:         "themeOpen"
+        controlCenter: "controlCenterOpen",
+        island:        "islandOpen"
     })
 
-    function anyOpen() {
-        for (var k in root._all)
+    // Popups that no longer have a window of their own: they are pages inside
+    // the control center. Toggling one of these names opens the control center
+    // on that page (so IPC and keybinds keep working); the page's own *Open
+    // bool is still set, because the page content hooks off it (scan on open,
+    // search-box focus). "notifications" is the main page's bottom card.
+    readonly property var _ccPages: ({
+        network:       "network",
+        bluetooth:     "bluetooth",
+        clipboard:     "clipboard",
+        emoji:         "emoji",
+        audio:         "audio",
+        notifications: "main"
+    })
+
+    // Open the control center on `page`, closing every other popup. Done by
+    // writing each bool once, not closeAll() + reopen, so the open bool never
+    // blips false and restarts the morph animation.
+    function showPage(page) {
+        for (var k in root._all) {
+            if (k === "controlCenter") continue
+            root[root._all[k]] = page !== "main" && k === page
+        }
+        root.ccPage = page
+        root.controlCenterOpen = true
+    }
+
+    function back() {
+        root.showPage("main")
+    }
+
+    // Open the island on `widget`, closing every other popup.
+    function openWidget(widget, fromHome) {
+        root.closeAll("island")
+        root.islandFromHome = !!fromHome && widget !== "home"
+        root.islandWidget = widget
+        root.islandOpen = true
+    }
+
+    // Same widget again closes the island; anything else switches to it.
+    function toggleWidget(widget) {
+        if (root.islandOpen && root.islandWidget === widget)
+            root.closeAll()
+        else
+            root.openWidget(widget, false)
+    }
+
+    // Escape inside the island: back to the grid, or close.
+    function islandBack() {
+        if (root.islandFromHome) root.openWidget("home", false)
+        else root.closeAll()
+    }
+
+    // `exceptControlCenter` skips the control center, its pages and the
+    // island, which all handle their own click-outside dismissal.
+    function anyOpen(exceptControlCenter) {
+        for (var k in root._all) {
+            if (exceptControlCenter
+                    && (k === "controlCenter" || k === "island"
+                        || root._ccPages[k] !== undefined))
+                continue
             if (root[root._all[k]])
                 return true
+        }
         return false
     }
 
@@ -73,6 +132,19 @@ QtObject {
 
     // Open one popup, closing the rest. Toggling the same one closes it.
     function toggle(name) {
+        var page = root._ccPages[name]
+        if (page !== undefined) {
+            if (root.controlCenterOpen && root.ccPage === page)
+                root.closeAll()
+            else
+                root.showPage(page)
+            return
+        }
+        if (name === "controlCenter" && !root.controlCenterOpen) {
+            root.showPage("main")
+            return
+        }
+
         var prop = root._all[name]
         if (prop === undefined) {
             console.warn("ShellState.toggle: unknown popup", name)
@@ -83,15 +155,25 @@ QtObject {
         root[prop] = next
     }
 
-    function open(name, tab) {
+    function open(name) {
+        var page = root._ccPages[name]
+        if (page !== undefined || name === "controlCenter") {
+            root.showPage(page !== undefined ? page : "main")
+            return
+        }
         var prop = root._all[name]
         if (prop === undefined) return
         root.closeAll(name)
-        if (tab !== undefined) root.dashboardTab = tab
         root[prop] = true
     }
 
     function close(name) {
+        // A page closing itself (clipboard entry picked, emoji copied) is done
+        // with the whole control center, not just that page.
+        if (root._ccPages[name] !== undefined || name === "controlCenter") {
+            if (root.controlCenterOpen) root.closeAll()
+            return
+        }
         var prop = root._all[name]
         if (prop !== undefined) root[prop] = false
     }

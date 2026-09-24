@@ -10,9 +10,13 @@ import Quickshell.Io
 Item {
     id: root
 
+    // Shown as a control-center page rather than a standalone popup.
+    property bool embedded: false
+
     readonly property int cellSize: 34
     readonly property int columns: Math.max(1,
-        Math.floor((Theme.emojiWidth - Theme.popupPadding * 2) / cellSize))
+        Math.floor(((root.width > 0 ? root.width : Theme.emojiWidth)
+                    - Theme.popupPadding * 2) / cellSize))
 
     property string query: ""
     property string group: ""      // "" = all groups
@@ -37,6 +41,7 @@ Item {
 
     PopupPanel {
         id: panel
+        embedded: root.embedded
         width: parent.width
 
         customHeader: Item {

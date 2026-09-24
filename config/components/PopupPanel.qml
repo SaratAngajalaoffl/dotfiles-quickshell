@@ -9,6 +9,9 @@
 // Background defaults to the SOLID palette colour: these popups live in
 // PopupWindows, which Hyprland cannot blur (finding F3). Large PanelWindow
 // popups pass `background: Theme.popupBg` to get the translucent version.
+//
+// `embedded: true` drops the fill and border, for popups shown as a page
+// inside the control center, which already paints the surface behind them.
 import QtQuick
 import "../theme"
 
@@ -20,14 +23,15 @@ Rectangle {
     property color  background: Theme.popupBgSolid
     property alias  customHeader: headerSlot.data
     property int    headerHeight: 46
+    property bool   embedded: false
 
     readonly property bool hasHeader: title !== "" || customHeader.length > 0
 
     default property alias content: body.data
 
     radius: Theme.cornerRadius
-    color: root.background
-    border.width: 1
+    color: root.embedded ? "transparent" : root.background
+    border.width: root.embedded ? 0 : 1
     border.color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.07)
 
     implicitWidth: column.implicitWidth + padding * 2

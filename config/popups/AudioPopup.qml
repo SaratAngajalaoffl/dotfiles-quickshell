@@ -8,11 +8,15 @@ import "../components"
 Item {
     id: root
 
+    // Shown as a control-center page rather than a standalone popup.
+    property bool embedded: false
+
     implicitWidth: Theme.popupWidth
     implicitHeight: panel.implicitHeight
 
     PopupPanel {
         id: panel
+        embedded: root.embedded
         title: "Audio"
         width: parent.width
 

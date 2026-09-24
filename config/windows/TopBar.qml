@@ -1,4 +1,6 @@
-// Top bar window: three content-sized notches painted by SeamlessBarShape.
+// Top bar window: left and right content-sized notches painted by
+// SeamlessBarShape. The center belongs to the island (Island.qml), which
+// floats over the bar strip instead of living in a notch.
 //
 // IMPORTANT (Chunk 0 finding F1): do NOT declare a `screen` property here.
 // PanelWindow already provides one, and shadowing it duplicates the window on
@@ -9,7 +11,6 @@ import "../theme"
 import "../state"
 import "../shapes"
 import "../modules/Left"
-import "../modules/Center"
 import "../modules/Right"
 
 PanelWindow {
@@ -38,10 +39,6 @@ PanelWindow {
         Theme.lNotchMinWidth,
         Math.min(Theme.lNotchMaxWidth, leftContent.implicitWidth + Theme.notchPadding * 2))
 
-    readonly property int cWidth: Math.max(
-        Theme.cNotchMinWidth,
-        Math.min(Theme.cNotchMaxWidth, centerContent.implicitWidth + Theme.notchPadding * 2))
-
     readonly property int rWidth: Math.max(
         Theme.rNotchMinWidth,
         Math.min(Theme.rNotchMaxWidth, rightContent.implicitWidth + Theme.notchPadding * 2))
@@ -67,7 +64,7 @@ PanelWindow {
         SeamlessBarShape {
             anchors.fill: parent
             leftWidth:   root.lWidth
-            centerWidth: root.cWidth
+            centerWidth: 0
             rightWidth:  root.rWidth
         }
 
@@ -80,18 +77,6 @@ PanelWindow {
             Workspaces {
                 id: leftContent
                 screen: root.screen
-                anchors.centerIn: parent
-            }
-        }
-
-        // Center notch — clock
-        Item {
-            width: root.cWidth
-            height: Theme.notchHeight
-            anchors.horizontalCenter: parent.horizontalCenter
-
-            Clock {
-                id: centerContent
                 anchors.centerIn: parent
             }
         }

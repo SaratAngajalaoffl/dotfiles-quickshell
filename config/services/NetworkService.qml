@@ -21,10 +21,19 @@ QtObject {
     property bool   wifiEnabled: true
     property string ip: ""
 
+    // Per-link state, independent of which one is primary, for the network
+    // page's Ethernet / Wi-Fi tiles.
+    property string ethDevice: ""       // first NM-managed ethernet device
+    property bool   ethConnected: false
+    property bool   wifiConnected: false
+    property string wifiSsid: ""
+
     readonly property string glyph: {
-        if (kind === "ethernet") return "\uf6ff"          // ethernet
+        // U+F0200 (md-ethernet) as a surrogate pair; the old FA5 \uf6ff
+        // network-wired glyph is not in Nerd Fonts v3 and rendered as a box.
+        if (kind === "ethernet") return "\udb80\ude00"    // ethernet
         if (!wifiEnabled)        return "\uf05e"          // disabled
-        if (!connected)          return "\uf6ff"
+        if (!connected)          return "\uf1eb"          // dimmed via `color`
         if (strength >= 75)      return "\uf1eb"          // full
         if (strength >= 50)      return "\uf1eb"
         if (strength >= 25)      return "\uf1eb"
@@ -87,11 +96,16 @@ QtObject {
         // wrongly report those as the primary link.
         var eth = false, wlan = false
         var ethDev = "", wlanDev = ""
+        var anyEthDev = ""
         var lines = devs.split("\n")
         for (var i = 0; i < lines.length; i++) {
             var parts = lines[i].split(":")
             if (parts.length < 3) continue
             var dev = parts[0], type = parts[1], state = parts[2]
+            // Docker's veth* pairs are ethernet too, but "unmanaged"; the
+            // tile wants the real NIC even while it's disconnected.
+            if (type === "ethernet" && state !== "unmanaged" && anyEthDev === "")
+                anyEthDev = dev
             if (state !== "connected") continue
             if (type === "ethernet" && !eth) { eth = true; ethDev = dev }
             if (type === "wifi" && !wlan)     { wlan = true; wlanDev = dev }
@@ -112,6 +126,20 @@ QtObject {
             root.connected = false
             root.ssid = ""
             root.strength = 0
+        }
+
+        root.ethDevice = eth ? ethDev : anyEthDev
+        root.ethConnected = eth
+        root.wifiConnected = wlan
+        root.wifiSsid = ""
+        if (wlan) {
+            var rows = wifi.split("\n")
+            for (var r = 0; r < rows.length; r++) {
+                if (rows[r].charAt(0) !== "*" && !rows[r].startsWith("yes")) continue
+                var rc = rows[r].split(":")
+                if (rc.length >= 4) root.wifiSsid = rc.slice(3).join(":").trim()
+                break
+            }
         }
 
         // Only take the wifi SSID/signal when wifi is the primary link. This
@@ -172,6 +200,13 @@ QtObject {
 
     function toggleWifi() {
         _run(["nmcli", "radio", "wifi", wifiEnabled ? "off" : "on"])
+    }
+
+    // "Disable" ethernet by disconnecting the device; NetworkManager then
+    // leaves it down until it is connected again.
+    function toggleEthernet() {
+        if (ethDevice === "") return
+        _run(["nmcli", "device", ethConnected ? "disconnect" : "connect", ethDevice])
     }
 
     function connect(ssidName, password) {

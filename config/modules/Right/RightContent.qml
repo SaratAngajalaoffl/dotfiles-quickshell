@@ -1,149 +1,145 @@
-// Right notch: system tray + status indicators + popup triggers.
+// Right notch: the status pill the control center grows out of.
 //
-// Every readout is backed by a real service now (Chunk 3), replacing the
-// placeholders from Chunk 1.
+// Three readouts: the active link (ethernet or wifi), volume with its
+// percentage, and notifications with an unread count, then the user's
+// ~/.face avatar at the far right. Everything else lives in
+// the control center, which opens when this corner is hovered. The control
+// center draws a copy of this pill over the notch and fades it out as it
+// morphs, so keep it free of per-instance state.
 import QtQuick
+import Quickshell
+import Quickshell.Widgets
 import "../../theme"
 import "../../state"
 import "../../services"
 import "../../components"
 
-Row {
+Item {
     id: root
 
-    spacing: 4
+    readonly property bool active: ShellState.controlCenterOpen
 
-    // ── System tray ─────────────────────────────────────────────────────────
-    SysTray {}
+    implicitWidth: row.implicitWidth + 20
+    implicitHeight: 28
 
-    // ── Media ───────────────────────────────────────────────────────────────
-    Media {}
+    Rectangle {
+        anchors.fill: parent
+        radius: height / 2
+        color: root.active ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.18)
+             : hover.hovered ? Theme.hover
+             : "transparent"
 
-    // ── Audio ───────────────────────────────────────────────────────────────
-    BarTrigger {
-        glyph: AudioService.glyph
-        label: AudioService.muted ? "muted" : AudioService.volumePercent + "%"
-        active: ShellState.audioOpen || ShellState.audioTriggerHovered
-        onTriggered: ShellState.toggle("audio")
-
-        HoverHandler {
-            id: audioHover
-            onHoveredChanged: ShellState.audioTriggerHovered = hovered
-        }
+        Behavior on color { ColorAnimation { duration: Theme.animFast } }
     }
 
-    // ── Network ─────────────────────────────────────────────────────────────
-    BarTrigger {
-        glyph: NetworkService.glyph
-        glyphColor: NetworkService.color
-        active: ShellState.networkOpen
-        onTriggered: ShellState.toggle("network")
-    }
+    Row {
+        id: row
+        anchors.centerIn: parent
+        spacing: 14
 
-    // ── Bluetooth ───────────────────────────────────────────────────────────
-    BarTrigger {
-        glyph: BluetoothService.glyph
-        glyphColor: BluetoothService.color
-        active: ShellState.bluetoothOpen
-        onTriggered: ShellState.toggle("bluetooth")
-    }
-
-    // ── Brightness ──────────────────────────────────────────────────────────
-    // Hidden entirely on machines with no backlight (this desktop).
-    BarTrigger {
-        visible: BrightnessService.available
-        glyph: BrightnessService.glyph
-        label: BrightnessService.percent + "%"
-        onTriggered: { /* no popup yet — brightness is a scroll/keys target */ }
-
-        WheelHandler {
-            onWheel: function (e) { BrightnessService.adjust(e.angleDelta.y > 0 ? 5 : -5) }
-        }
-    }
-
-    // ── Battery (hidden on desktops) ────────────────────────────────────────
-    BarTrigger {
-        visible: BatteryService.visible
-        glyph: BatteryService.glyph
-        glyphColor: BatteryService.color
-        label: BatteryService.percent + "%"
-        onTriggered: { /* power popup lands with the dashboard */ }
-    }
-
-    // ── Theme picker (replaces the rofi theme menu) ─────────────────────────
-    BarTrigger {
-        glyph: "\uf53f"
-        active: ShellState.themeOpen
-        onTriggered: ShellState.toggle("theme")
-    }
-
-    // ── Dashboard (calendar / pomodoro / customise) ────────────────────────
-    BarTrigger {
-        glyph: "\uf00a"
-        active: ShellState.dashboardOpen
-        onTriggered: ShellState.toggle("dashboard")
-    }
-
-    // ── Wallpaper ───────────────────────────────────────────────────────────
-    BarTrigger {
-        glyph: "\uf03e"
-        active: ShellState.wallpaperOpen
-        onTriggered: ShellState.toggle("wallpaper")
-    }
-
-    // ── Clipboard ───────────────────────────────────────────────────────────
-    BarTrigger {
-        glyph: "\uf0ea"
-        active: ShellState.clipboardOpen
-        onTriggered: ShellState.toggle("clipboard")
-    }
-
-    // ── Emoji picker (replaces rofi-emoji) ──────────────────────────────────
-    BarTrigger {
-        glyph: "\uf118"
-        active: ShellState.emojiOpen
-        onTriggered: ShellState.toggle("emoji")
-    }
-
-    // ── Notifications, with unread badge ────────────────────────────────────
-    Item {
-        width: 26
-        height: 26
-
-        BarTrigger {
-            anchors.fill: parent
-            glyph: "\uf0f3"
-            active: ShellState.notificationsOpen
-            onTriggered: ShellState.toggle("notifications")
+        // ── Network: ethernet or wifi glyph, dimmed when offline ────────────
+        Glyph {
+            text: NetworkService.glyph
+            color_: NetworkService.color
         }
 
-        property int unread: NotificationService.unreadCount
+        // ── Volume + percentage ─────────────────────────────────────────────
+        Row {
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 6
 
-        Rectangle {
-            visible: parent.unread > 0
-            anchors.right: parent.right
-            anchors.top: parent.top
-            width: Math.max(14, badgeText.width + 8)
-            height: 14
-            radius: height / 2
-            color: Theme.urgent
+            Glyph {
+                text: AudioService.glyph
+                color_: AudioService.muted ? Theme.inactive : Theme.text
+            }
 
             Text {
-                id: badgeText
-                anchors.centerIn: parent
-                text: parent.parent.unread > 99 ? "99+" : String(parent.parent.unread)
-                color: Theme.crust
+                anchors.verticalCenter: parent.verticalCenter
+                text: AudioService.volumePercent + "%"
+                color: AudioService.muted ? Theme.inactive : Theme.text
                 font.family: Theme.fontFamily
-                font.pixelSize: 9
-                font.bold: true
+                font.pixelSize: Theme.fontSize
+            }
+        }
+
+        // ── Notifications, with unread count badge ──────────────────────────
+        Item {
+            anchors.verticalCenter: parent.verticalCenter
+            width: bell.implicitWidth + (badge.visible ? badge.width - 6 : 0)
+            height: bell.implicitHeight
+
+            Glyph {
+                id: bell
+                anchors.left: parent.left
+                text: NotificationService.dnd ? "" : ""
+                color_: NotificationService.dnd ? Theme.inactive : Theme.text
+            }
+
+            Rectangle {
+                id: badge
+                readonly property int unread: NotificationService.unreadCount
+
+                visible: unread > 0
+                anchors { left: bell.right; leftMargin: -6; top: parent.top; topMargin: -4 }
+                width: Math.max(height, badgeText.implicitWidth + 8)
+                height: 14
+                radius: height / 2
+                color: Theme.urgent
+
+                Text {
+                    id: badgeText
+                    anchors.centerIn: parent
+                    text: badge.unread > 99 ? "99+" : String(badge.unread)
+                    color: Theme.crust
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 9
+                    font.bold: true
+                }
+            }
+        }
+
+        // ── Avatar (~/.face), hidden if the file is missing ─────────────────
+        ClippingRectangle {
+            anchors.verticalCenter: parent.verticalCenter
+            visible: face.status === Image.Ready
+            width: 22
+            height: 22
+            radius: width / 2
+            color: Theme.surface1
+            border.width: 1
+            border.color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.15)
+
+            Image {
+                id: face
+                anchors.fill: parent
+                source: "file://" + Quickshell.env("HOME") + "/.face"
+                sourceSize.width: 44          // 2x for crispness
+                sourceSize.height: 44
+                fillMode: Image.PreserveAspectCrop
+                smooth: true
+                asynchronous: true
+                // Uncached, so a changed ~/.face shows up on the next reload.
+                cache: false
             }
         }
     }
 
-    // ── User / power menu ───────────────────────────────────────────────────
-    BarTrigger {
-        glyph: "\uf007"
-        active: ShellState.userMenuOpen
-        onTriggered: ShellState.toggle("userMenu")
+    HoverHandler {
+        id: hover
+        cursorShape: Qt.PointingHandCursor
+    }
+
+    TapHandler {
+        onTapped: ShellState.toggle("controlCenter")
+    }
+
+    // Scroll anywhere on the pill for volume.
+    WheelHandler {
+        onWheel: function (e) { AudioService.adjustVolume(e.angleDelta.y > 0 ? 0.05 : -0.05) }
+    }
+
+    component Glyph: Icon {
+        anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+        font.pixelSize: Theme.fontSizeLarge
     }
 }

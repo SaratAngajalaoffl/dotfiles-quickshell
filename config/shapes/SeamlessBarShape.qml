@@ -1,4 +1,5 @@
-// Seamless three-notch bar shape.
+// Seamless three-notch bar shape. centerWidth 0 drops the center notch and
+// runs the strip straight across.
 //
 // One Canvas paints all three notches plus the thin strip connecting them, so
 // the bar reads as a single object rather than three floating pills.
@@ -57,13 +58,15 @@ Canvas {
         ctx.lineTo(centerStart - r, b)
 
         // ── Center notch ────────────────────────────────────────────────────
-        ctx.arcTo(centerStart, b, centerStart, b + r, r)
-        ctx.lineTo(centerStart, h - r)
-        ctx.arcTo(centerStart, h, centerStart + r, h, r)
-        ctx.lineTo(centerEnd - r, h)
-        ctx.arcTo(centerEnd, h, centerEnd, h - r, r)
-        ctx.lineTo(centerEnd, b + r)
-        ctx.arcTo(centerEnd, b, centerEnd + r, b, r)
+        if (centerW > 0) {
+            ctx.arcTo(centerStart, b, centerStart, b + r, r)
+            ctx.lineTo(centerStart, h - r)
+            ctx.arcTo(centerStart, h, centerStart + r, h, r)
+            ctx.lineTo(centerEnd - r, h)
+            ctx.arcTo(centerEnd, h, centerEnd, h - r, r)
+            ctx.lineTo(centerEnd, b + r)
+            ctx.arcTo(centerEnd, b, centerEnd + r, b, r)
+        }
 
         // ── Gap (center -> right) ───────────────────────────────────────────
         ctx.lineTo(rightStart - r, b)

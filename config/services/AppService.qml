@@ -149,6 +149,6 @@ QtObject {
         var cmd = app.exec.replace(/%[uUfFdDnNickvm]/g, "").trim()
         _run.command = ["bash", "-c", "setsid " + cmd + " >/dev/null 2>&1 &"]
         _run.running = true
-        ShellState.close("launcher")
+        ShellState.closeAll()
     }
 }

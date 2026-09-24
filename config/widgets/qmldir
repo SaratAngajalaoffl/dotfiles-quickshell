@@ -1,0 +1,5 @@
+singleton Registry 1.0 Registry.qml
+WidgetHost 1.0 WidgetHost.qml
+WidgetHome 1.0 WidgetHome.qml
+Placeholder 1.0 Placeholder.qml
+LauncherWidget 1.0 LauncherWidget.qml

@@ -28,17 +28,29 @@ QtObject {
     // ── Popup sizing ────────────────────────────────────────────────────────
     property int popupPadding: 16
     property int popupWidth: 400
-    property int dashboardWidth: 900
-    property int dashboardHeight: 520
     property int notificationsWidth: 400
     property int networkPopupWidth: 480
     property int launcherWidth: 520
     property int launcherMaxHeight: 420
     property int emojiWidth: 360
     property int emojiMaxHeight: 400
-    property int wallpaperWidth: 460
     property int spotifyWidth: 420
-    property int wallpaperMaxHeight: 520
+
+    // ── Control center ──────────────────────────────────────────────────────
+    property int ccWidth: 420          // every page, so the panel keeps one shape
+    property int ccHeight: 560
+    property int ccPadding: 14
+    property int ccRadius: 24          // bottom-left corner once expanded
+    property int ccCardRadius: 18
+    property int ccMorphDuration: 500
+
+    // ── Island (center pill) ────────────────────────────────────────────────
+    property int islandTop: 10            // gap from the top of the screen
+    property int islandRestHeight: 30     // clock pill at rest
+    property int islandPeekWidth: 540     // hover: media / clock / RAM
+    property int islandPeekHeight: 72
+    property int islandRadius: 24         // corner cap once taller than a pill
+    property int islandMorphDuration: 450
 
     // ── Workspace pills ─────────────────────────────────────────────────────
     property int wsDotSize: 10

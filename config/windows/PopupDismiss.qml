@@ -24,8 +24,9 @@ PanelWindow {
         bottom: true
     }
 
-    // Only present when a popup is open.
-    visible: root.onFocused && ShellState.anyOpen()
+    // Only present when a popup is open. The control center dismisses itself:
+    // this layer would map above it and eat its clicks.
+    visible: root.onFocused && ShellState.anyOpen(true)
 
     // Sits below popups but above normal windows for input purposes.
     focusable: true

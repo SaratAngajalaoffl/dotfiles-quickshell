@@ -13,8 +13,12 @@ Part of the [dotfiles-arch](https://github.com/SaratAngajalaoffl/dotfiles-arch) 
 - `config/services/` — one singleton per subsystem (notifications, audio, …)
 - `config/components/` — reusable QML (popup slide, cards, toggles)
 - `config/shapes/` — Canvas shapes (notch bar, screen frame)
-- `config/windows/` — `TopBar`, `Frame`, `PopupDismiss`
-- `config/modules/` — bar notch content, split `Left`/`Center`/`Right`
+- `config/windows/` — `TopBar`, `Frame`, `PopupDismiss`, `Island`
+- `config/modules/` — bar notch content, split `Left`/`Right`, plus `Island`
+  (the center pill's rest and hover faces)
+- `config/widgets/` — widgets the island opens. `Registry.qml` lists them;
+  `WidgetHost.qml` documents the contract a widget file follows. Open one
+  directly with `qs ipc call island toggle <id>` (`qs ipc call island list`)
 - `config/popups/` — one file per popup; only `PopupLayer.qml` instantiates them
 
 ## Running
