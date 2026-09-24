@@ -4,8 +4,8 @@
 // The top edge is the bar window's job (it owns the exclusive zone), so this
 // frame is inset by notchHeight at the top.
 //
-// Validated in the Chunk 0 spike: `ctx.fill("evenodd")` cuts the hole
-// correctly with both contours wound the same way.
+// Validated in the Chunk 0 spike: the odd-even fill rule cuts the hole
+// correctly because the contours are wound in opposite directions.
 import Quickshell
 import QtQuick
 import "../theme"
@@ -16,6 +16,10 @@ PanelWindow {
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
 
+    // Purely decorative: the surface covers the whole monitor, so without an
+    // empty input mask it swallows every click meant for the windows below.
+    mask: Region {}
+
     anchors {
         top: true
         left: true
@@ -23,12 +27,8 @@ PanelWindow {
         bottom: true
     }
 
-    margins {
-        top: Theme.notchHeight
-        left: Theme.borderWidth
-        right: Theme.borderWidth
-        bottom: Theme.borderWidth
-    }
+    // Flush with the monitor on left/right/bottom; the bar owns the top.
+    margins.top: Theme.notchHeight
 
     Canvas {
         id: frame
@@ -55,32 +55,26 @@ PanelWindow {
 
             ctx.beginPath()
 
-            // Outer rounded rect
-            ctx.moveTo(r, 0)
-            ctx.lineTo(w - r, 0)
-            ctx.arcTo(w, 0, w, r, r)
-            ctx.lineTo(w, h - r)
-            ctx.arcTo(w, h, w - r, h, r)
-            ctx.lineTo(r, h)
-            ctx.arcTo(0, h, 0, h - r, r)
-            ctx.lineTo(0, r)
-            ctx.arcTo(0, 0, r, 0, r)
-            ctx.closePath()
+            // Outer edge: square, flush with the monitor edges.
+            ctx.rect(0, 0, w, h)
 
-            // Inner rounded rect — even-odd punches this out.
-            ctx.moveTo(t + r, t)
-            ctx.lineTo(t + r, h - t - r)
-            ctx.arcTo(t + r, h - t, t + r + r, h - t, r)
+            // Inner rounded rect, wound the opposite way so it punches a hole
+            // under either fill rule. It is open at the top (no top strip):
+            // the side edges run straight up into the bar, and the rounded
+            // top corners blend them into the corner notches.
+            ctx.moveTo(t + r, 0)
+            ctx.arcTo(t, 0, t, r, r)
+            ctx.lineTo(t, h - t - r)
+            ctx.arcTo(t, h - t, t + r, h - t, r)
             ctx.lineTo(w - t - r, h - t)
             ctx.arcTo(w - t, h - t, w - t, h - t - r, r)
-            ctx.lineTo(w - t, t + r)
-            ctx.arcTo(w - t, t, w - t - r, t, r)
-            ctx.lineTo(t + r + r, t)
-            ctx.arcTo(t + r, t, t + r, t + r, r)
+            ctx.lineTo(w - t, r)
+            ctx.arcTo(w - t, 0, w - t - r, 0, r)
             ctx.closePath()
 
+            ctx.fillRule = Qt.OddEvenFill
             ctx.fillStyle = Theme.barBg
-            ctx.fill("evenodd")
+            ctx.fill()
         }
     }
 }
