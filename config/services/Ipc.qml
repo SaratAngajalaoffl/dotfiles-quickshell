@@ -53,6 +53,16 @@ QtObject {
         function all(): string { return reloadAll() }
     }
 
+    property IpcHandler _lights: IpcHandler {
+        target: "lights"
+        function status(): string {
+            return JSON.stringify({ active: RgbService.active, brightness: RgbService.brightness })
+        }
+        function toggle(): string { RgbService.toggle(); return "toggled" }
+        function set(name: string): string { RgbService.setProfile(name); return name }
+        function brightness(pct: int): string { RgbService.setBrightness(pct); return String(pct) }
+    }
+
     property IpcHandler _popups: IpcHandler {
         target: "popups"
         function closeAll(): string { return closeAllPopups() }

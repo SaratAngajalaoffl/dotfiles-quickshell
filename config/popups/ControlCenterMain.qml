@@ -30,8 +30,8 @@ Item {
         }
         spacing: 10
 
-        // Tile grid: Wi-Fi and Bluetooth share the wider left column; Audio
-        // spans the two cells to its right (Peace + Night Light).
+        // Tile grid: Wi-Fi and Bluetooth share the wider left column; the two
+        // cells to their right hold Audio + Lights, then Peace + Night Light.
         readonly property real sideWidth: Math.round((width - spacing) * 0.38)
         readonly property real cellWidth: (width - sideWidth - spacing * 2) / 2
 
@@ -83,13 +83,25 @@ Item {
             }
 
             QuickTile {
-                width: column.cellWidth * 2 + parent.spacing
+                width: column.cellWidth
                 glyph: AudioService.glyph
                 title: "Audio"
                 subtitle: AudioService.muted ? "Muted" : (AudioService.sinkName || "No output")
                 active: !AudioService.muted
                 onToggled: AudioService.toggleMute()
                 onOpened: ShellState.showPage("audio")
+            }
+
+            // The glyph flips between `off` and the last profile that wasn't.
+            QuickTile {
+                width: column.cellWidth
+                glyph: "\uf0eb"
+                title: "Lights"
+                subtitle: !RgbService.available ? "Unavailable"
+                        : RgbService.on ? RgbService.active : "Off"
+                active: RgbService.on
+                onToggled: RgbService.toggle()
+                onOpened: ShellState.showPage("lights")
             }
         }
 

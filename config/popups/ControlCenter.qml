@@ -103,7 +103,7 @@ PanelWindow {
 
     // Refresh cached lists the main page reads, whenever the panel opens.
     onOpenChanged: {
-        if (open) NightLightService.refresh()
+        if (open) { NightLightService.refresh(); RgbService.refresh() }
         else _pointerSeen = false
     }
 
@@ -253,6 +253,9 @@ PanelWindow {
             }
             Page { name: "spotify"
                 SpotifyPopup { width: parent.width; embedded: true }
+            }
+            Page { name: "lights"
+                LightsPopup { width: parent.width; embedded: true }
             }
         }
     }

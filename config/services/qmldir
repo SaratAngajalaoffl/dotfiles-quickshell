@@ -23,3 +23,4 @@ singleton WallpaperLibrary 1.0 WallpaperLibrary.qml
 singleton NightLightService 1.0 NightLightService.qml
 singleton SystemService 1.0 SystemService.qml
 singleton StatsService 1.0 StatsService.qml
+singleton RgbService 1.0 RgbService.qml
