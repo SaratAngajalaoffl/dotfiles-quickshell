@@ -19,10 +19,6 @@ QtObject {
     property bool spotifyOpen:       false
     property bool controlCenterOpen: false
 
-    // Toasts are not part of the one-popup-at-a-time set: a toast can be on
-    // screen while the notifications panel is open.
-    property bool notificationToastOpen: false
-
     // Which control-center page is showing: "main" or one of the _ccPages.
     property string ccPage: "main"
 
@@ -34,6 +30,12 @@ QtObject {
     property bool   islandOpen:     false
     property string islandWidget:   "home"
     property bool   islandFromHome: false
+
+    // Last tab shown in the Settings widget (a tab id from SettingsWidget).
+    property string settingsTab: "hyprland"
+
+    // Last tab shown in the Agents widget (a tab id from AgentsWidget).
+    property string agentsTab: "claude"
 
     // ── Transient state ─────────────────────────────────────────────────────
     // Collapses the bar to an edge strip, for fullscreen-ish focus.
@@ -92,6 +94,22 @@ QtObject {
         root.islandFromHome = !!fromHome && widget !== "home"
         root.islandWidget = widget
         root.islandOpen = true
+    }
+
+    // A new notification: show it in the island without closing anything
+    // else, and only if the island isn't busy with a widget you opened (the
+    // bell badge still counts it then).
+    function showNotification() {
+        if (root.islandOpen && root.islandWidget !== "notification") return
+        root.islandFromHome = false
+        root.islandWidget = "notification"
+        root.islandOpen = true
+    }
+
+    // Hide the notification, leaving any other widget alone.
+    function hideNotification() {
+        if (root.islandOpen && root.islandWidget === "notification")
+            root.islandOpen = false
     }
 
     // Same widget again closes the island; anything else switches to it.

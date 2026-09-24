@@ -44,3 +44,9 @@ app in this dotfiles system already speaks.
 
 Not used standalone — applied by the parent repo's `install.sh`, which reads
 `.links` and symlinks `config` into place.
+
+`.secrets` declares the keyring entries the shell reads: the Spotify search
+client, and for the Agents widget (`scripts/agent-usage.py`) an OpenCode API
+key (Go subscription limits) and the Bifrost admin login (gateway stats; set
+`BIFROST_URL` if the gateway moves off `http://10.43.226.225:8080`). Claude
+usage needs nothing extra — it reuses Claude Code's own sign-in.

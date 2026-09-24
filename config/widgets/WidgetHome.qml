@@ -11,7 +11,7 @@ Item {
 
     property bool active: false
 
-    readonly property int columns: 5
+    readonly property int columns: 4
     readonly property int cell: 92
     readonly property int pad: 14
     readonly property int rows: Math.ceil(Registry.pickable.length / columns)

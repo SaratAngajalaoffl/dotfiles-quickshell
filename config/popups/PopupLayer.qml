@@ -78,18 +78,4 @@ Item {
         barWindow: root.barWindow
         active: root.active
     }
-
-    // ── Toast ───────────────────────────────────────────────────────────────
-    RightPopup {
-        id: toastPopup
-        open: root.active && ShellState.notificationToastOpen
-        popupWidth: Theme.notificationsWidth - 40
-        contentHeight: toastContent.implicitHeight
-
-        NotificationToast {
-            id: toastContent
-            width: parent.width
-            notification: NotificationService.latest
-        }
-    }
 }

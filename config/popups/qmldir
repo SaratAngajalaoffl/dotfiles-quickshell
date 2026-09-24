@@ -1,7 +1,6 @@
 PopupLayer 1.0 PopupLayer.qml
 NotificationsPopup 1.0 NotificationsPopup.qml
 NotificationCard 1.0 NotificationCard.qml
-NotificationToast 1.0 NotificationToast.qml
 AudioPopup 1.0 AudioPopup.qml
 NetworkPopup 1.0 NetworkPopup.qml
 BluetoothPopup 1.0 BluetoothPopup.qml

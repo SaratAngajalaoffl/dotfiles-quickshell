@@ -75,6 +75,18 @@ QtObject {
             return widget
         }
         function close(): string { ShellState.closeAll(); return "closed" }
+        // Open Settings on a tab: hyprland, monitors, kitty.
+        function settings(tab: string): string {
+            ShellState.settingsTab = tab
+            ShellState.openWidget("settings", false)
+            return tab
+        }
+        // Open Agents on a tab: claude, opencode, bifrost.
+        function agents(tab: string): string {
+            ShellState.agentsTab = tab
+            ShellState.openWidget("agents", false)
+            return tab
+        }
         function list(): string {
             return Registry.widgets.map(function (w) { return w.id }).join("\n")
         }
@@ -133,6 +145,12 @@ QtObject {
             return key + "=" + v
         }
         function reset(): string { SettingsService.reset(); return "reset" }
+        // "all" or one output name to leave on.
+        function monitors(mode: string): string { SettingsService.setMonitorMode(mode); return mode }
+        function workspace(ws: string, output: string): string {
+            SettingsService.setWorkspaceMonitor(ws, output)
+            return ws + " -> " + output
+        }
     }
 
     property IpcHandler _pomodoro: IpcHandler {

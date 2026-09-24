@@ -4,7 +4,9 @@
 //   rest   — a small clock pill (EQ bars while music plays)
 //   peek   — on hover: now playing / clock + date / RAM
 //   widget — on click or keybind: one Registry widget, "home" being the
-//            grid of all of them (see widgets/Registry.qml)
+//            grid of all of them (see widgets/Registry.qml). The shell also
+//            opens hidden ones itself: the polkit prompt, and new
+//            notifications (passive: no keyboard grab, no backdrop)
 //
 // Like the control center, the surface covers the whole monitor and stays
 // mapped, so the morph never resizes the window and Hyprland's layersIn fade
@@ -13,8 +15,8 @@
 // for the same reason the control center does: PopupDismiss would map above
 // it and swallow its clicks.
 //
-// Only the focused monitor's island opens a widget; every monitor shows its
-// own rest/peek pill.
+// Only the focused monitor's island opens a widget (passive ones show on
+// all); every monitor shows its own rest/peek pill.
 import Quickshell
 import Quickshell.Wayland
 import QtQuick
@@ -28,7 +30,15 @@ PanelWindow {
     id: root
 
     readonly property bool active: HyprlandService.isFocused(root.screen)
-    readonly property bool open: active && ShellState.islandOpen
+    // A passive widget (a notification) shows on every monitor, without the
+    // keyboard or a click-outside backdrop, so it never interrupts what
+    // you're doing. Other widgets open on the focused monitor only.
+    readonly property bool passive: {
+        var meta = Registry.find(ShellState.islandWidget)
+        return !!meta && !!meta.passive
+    }
+    readonly property bool open: ShellState.islandOpen && (active || passive)
+    readonly property bool modal: open && !passive
 
     readonly property string mode: open ? "widget" : peeking ? "peek" : "rest"
 
@@ -60,14 +70,14 @@ PanelWindow {
     visible: !ShellState.focusMode || root.open
 
     // Widgets with search fields (launcher) need keys the moment they open.
-    WlrLayershell.keyboardFocus: root.open ? WlrKeyboardFocus.Exclusive
+    WlrLayershell.keyboardFocus: root.modal ? WlrKeyboardFocus.Exclusive
                                            : WlrKeyboardFocus.None
 
     mask: Region {
-        x: root.open ? 0 : body.x
-        y: root.open ? 0 : body.y
-        width: root.open ? root.width : body.width
-        height: root.open ? root.height : body.height
+        x: root.modal ? 0 : body.x
+        y: root.modal ? 0 : body.y
+        width: root.modal ? root.width : body.width
+        height: root.modal ? root.height : body.height
     }
 
     // One clock for both the rest and peek faces.
@@ -97,7 +107,7 @@ PanelWindow {
     // ── Dismissal ───────────────────────────────────────────────────────────
     Shortcut {
         sequence: "Escape"
-        enabled: root.open
+        enabled: root.modal
         onActivated: ShellState.islandBack()
     }
 
@@ -106,7 +116,7 @@ PanelWindow {
     // blocker item over the body).
     MouseArea {
         anchors.fill: parent
-        enabled: root.open
+        enabled: root.modal
         onPressed: function (mouse) {
             mouse.accepted = !body.contains(mapToItem(body, mouse.x, mouse.y))
         }

@@ -21,18 +21,20 @@ QtObject {
     // source: QML file in this directory, "" until the widget exists
     // hidden: (optional) left off the home grid — for widgets the shell opens
     //         itself when needed (e.g. the polkit prompt), not ones you pick
+    // passive: (optional) shown without taking the keyboard or the rest of
+    //          the screen — it doesn't interrupt typing, and clicks outside
+    //          go through (e.g. a notification)
     readonly property var widgets: [
         { id: "launcher",   name: "Apps",       icon: "\uf135", source: "LauncherWidget.qml" },
-        { id: "theme",      name: "Themes",     icon: "\u{f03d8}", source: "" },
-        { id: "wallpaper",  name: "Wallpapers", icon: "\uf03e", source: "" },
-        { id: "settings",   name: "Settings",   icon: "\uf013", source: "" },
-        { id: "agents",     name: "Agents",     icon: "\u{f06a9}", source: "" },
-        { id: "clipboard",  name: "Clipboard",  icon: "\uf0ea", source: "" },
-        { id: "emoji",      name: "Emoji",      icon: "\uf118", source: "" },
+        { id: "theme",      name: "Themes",     icon: "\u{f03d8}", source: "ThemeWidget.qml" },   // wallpapers = themes
+        { id: "settings",   name: "Settings",   icon: "\uf013", source: "SettingsWidget.qml" },
+        { id: "agents",     name: "Agents",     icon: "\u{f06a9}", source: "AgentsWidget.qml" },
+        { id: "clipboard",  name: "Clipboard",  icon: "\uf0ea", source: "ClipboardWidget.qml" },
+        { id: "emoji",      name: "Emoji",      icon: "\uf118", source: "EmojiWidget.qml" },
         { id: "pomodoro",   name: "Pomodoro",   icon: "\uf2f2", source: "" },
         { id: "calendar",   name: "Calendar",   icon: "\uf073", source: "" },
-        { id: "spotify",    name: "Spotify",    icon: "\uf1bc", source: "" },
-        { id: "polkit",     name: "Authenticate", icon: "\uf023", source: "PolkitWidget.qml", hidden: true }
+        { id: "polkit",     name: "Authenticate", icon: "\uf023", source: "PolkitWidget.qml", hidden: true },
+        { id: "notification", name: "Notification", icon: "\uf0f3", source: "NotificationWidget.qml", hidden: true, passive: true }
     ]
 
     // What the home grid shows.

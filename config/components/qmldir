@@ -10,3 +10,4 @@ SettingRow 1.0 SettingRow.qml
 PillSlider 1.0 PillSlider.qml
 CenteredIcon 1.0 CenteredIcon.qml
 QuickTile 1.0 QuickTile.qml
+TabBar 1.0 TabBar.qml

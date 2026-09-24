@@ -15,7 +15,9 @@ import Quickshell.Io
 QtObject {
     id: root
 
-    property var entries: []      // { id, preview, isImage, thumb, imgW, imgH }
+    // { id, preview, isImage, thumb, imgW, imgH, kind }
+    // kind: "image" | "url" | "color" | "secret" | "text"
+    property var entries: []
     property int maxPreview: 80
     property bool available: true
 
@@ -97,12 +99,48 @@ QtObject {
             }
             out.push({
                 id: id, isImage: isImage, preview: preview, thumb: thumb,
+                kind: isImage ? "image" : root.kindOf(body),
                 imgW: m ? parseInt(m[3], 10) : 0,
                 imgH: m ? parseInt(m[4], 10) : 0
             })
         }
         root.entries = out
         root._decodeThumbs(thumbs)
+    }
+
+    // What a text entry looks like, so the widget can draw it to suit:
+    // "secret" entries (API keys, tokens) are masked rather than shown.
+    readonly property var _secretPatterns: [
+        /^(sk|pk|rk)[-_][A-Za-z0-9_-]{16,}$/,          // OpenAI, Stripe, Anthropic
+        /^oc_sk_[A-Za-z0-9_]{16,}$/,                   // OpenCode
+        /^(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}$/,    // GitHub
+        /^github_pat_[A-Za-z0-9_]{20,}$/,
+        /^xox[abposr]-[A-Za-z0-9-]{10,}$/,             // Slack
+        /^AKIA[0-9A-Z]{16}$/,                          // AWS access key id
+        /^AIza[0-9A-Za-z_-]{30,}$/,                    // Google API key
+        /^glpat-[A-Za-z0-9_-]{20,}$/,                  // GitLab
+        /^eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}$/,  // JWT
+        /^-----BEGIN [A-Z ]*PRIVATE KEY-----/
+    ]
+
+    function kindOf(text) {
+        var t = text.trim()
+        for (var i = 0; i < root._secretPatterns.length; i++)
+            if (root._secretPatterns[i].test(t)) return "secret"
+        // A long unbroken run of letters AND digits (and nothing else) is
+        // almost always a token of some sort.
+        if (t.length >= 32 && /^[A-Za-z0-9_\-+/=.]+$/.test(t) && /[0-9]/.test(t)
+                && /[a-z]/.test(t) && /[A-Z]/.test(t) && !/^[0-9a-f]+$/.test(t))
+            return "secret"
+        // A short unbroken string mixing upper, lower, digits and symbols
+        // reads like a password.
+        if (t.length >= 10 && t.length <= 64 && !/\s/.test(t) && /[A-Z]/.test(t) && /[a-z]/.test(t)
+                && /[0-9]/.test(t) && /[^A-Za-z0-9]/.test(t) && !/^https?:/.test(t)
+                && !/[(){}\[\];,<>"'`]/.test(t))
+            return "secret"
+        if (/^https?:\/\/\S+$/.test(t)) return "url"
+        if (/^(#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8})$/.test(t)) return "color"
+        return "text"
     }
 
     // ── Thumbnails ──────────────────────────────────────────────────────────
@@ -133,13 +171,25 @@ QtObject {
     }
 
     // ── Actions ─────────────────────────────────────────────────────────────
+    // Commands run one at a time; ones issued meanwhile (a few quick
+    // deletes) queue up rather than being dropped.
+    property var _queue: []
+
     property Process _action: Process {
-        onExited: function () { root.refresh() }
+        onExited: function () {
+            if (root._queue.length > 0) root._next()
+            else root.refresh()
+        }
     }
 
     function _run(cmd) {
-        if (_action.running)
-            return
+        root._queue = root._queue.concat([cmd])
+        if (!_action.running) _next()
+    }
+
+    function _next() {
+        var cmd = root._queue[0]
+        root._queue = root._queue.slice(1)
         _action.command = ["bash", "-c", cmd]
         _action.running = true
     }
@@ -157,10 +207,15 @@ QtObject {
         var safe = String(id).replace(/[^0-9]/g, "")
         if (safe === "")
             return
-        _run("cliphist delete " + safe)
+        // `cliphist delete` ignores arguments: it reads "<id>\t…" lines from
+        // stdin, like `cliphist list` prints them.
+        // Drop it from the list now; the re-list after the command confirms.
+        root.entries = root.entries.filter(function (e) { return e.id !== String(id) })
+        _run("printf '%s\\t\\n' " + safe + " | cliphist delete")
     }
 
     function clearAll() {
+        root.entries = []
         _run("cliphist wipe")
     }
 }

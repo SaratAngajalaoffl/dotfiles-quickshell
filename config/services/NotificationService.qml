@@ -42,8 +42,13 @@ QtObject {
 
     signal toastRequested(var notification)
 
-    // Most recent live notification object, for the toast to render.
+    // Most recent live notification object.
     property var latest: null
+
+    // What the island's notification widget shows: the newest entry, plus
+    // the live `image` (never persisted — it only resolves while the sender's
+    // notification is alive).
+    property var toast: null
 
     readonly property int maxHistory: 200
 
@@ -98,7 +103,7 @@ QtObject {
         root.latest = n
         if (!root.dnd && root._ready) {
             root.toastRequested(n)
-            ShellState.notificationToastOpen = true
+            root._showToast(Object.assign({ image: n.image || "" }, entry))
         }
 
         root.save()
@@ -125,8 +130,45 @@ QtObject {
         root.unreadCount = root.unreadCount + 1
         root.save()
         if (!root.dnd && root._ready)
-            ShellState.notificationToastOpen = true
+            root._showToast(Object.assign({ image: "" }, entry))
         return entry.id
+    }
+
+    // ── Island countdown ────────────────────────────────────────────────────
+    // One countdown for the island on every monitor: it hides them together,
+    // and hovering any of them (holdToast) pauses it. Critical notifications
+    // don't count down at all.
+    readonly property int toastDuration: 6000
+    property real toastFraction: 1
+    property int _toastHolds: 0
+
+    property NumberAnimation _toastCountdown: NumberAnimation {
+        target: root
+        property: "toastFraction"
+        to: 0
+        onFinished: ShellState.hideNotification()
+    }
+
+    function _showToast(entry) {
+        root.toast = entry
+        root.toastFraction = 1
+        root._toastHolds = 0
+        ShellState.showNotification()
+        root._runToast()
+    }
+
+    function _runToast() {
+        _toastCountdown.stop()
+        if (root._toastHolds > 0 || !root.toast || root.toast.urgency === 2) return
+        _toastCountdown.from = root.toastFraction
+        _toastCountdown.duration = root.toastDuration * root.toastFraction
+        _toastCountdown.start()
+    }
+
+    function holdToast(on) {
+        root._toastHolds = Math.max(0, root._toastHolds + (on ? 1 : -1))
+        if (root._toastHolds > 0) _toastCountdown.stop()
+        else root._runToast()
     }
 
     function _indexOf(id) {
