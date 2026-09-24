@@ -161,7 +161,8 @@ QtObject {
                 remaining: PomodoroService.remaining,
                 running: PomodoroService.running,
                 completed: PomodoroService.completed,
-                clock: PomodoroService.clock
+                clock: PomodoroService.clock,
+                ringing: PomodoroService.ringing
             })
         }
         function start(): string { PomodoroService.start(); return "started" }
@@ -169,6 +170,11 @@ QtObject {
         function reset(): string { PomodoroService.reset(); return "reset" }
         function skip(): string { PomodoroService.skip(); return "skipped" }
         function setPhase(p: string): string { PomodoroService.setPhase(p); return p }
+        function toggle(): string { PomodoroService.toggle(); return PomodoroService.running ? "running" : "paused" }
+        // Alarm actions.
+        function next(): string { PomodoroService.startNext(); return PomodoroService.phase }
+        function snooze(minutes: int): string { PomodoroService.snooze(minutes); return "snoozed" }
+        function dismiss(): string { PomodoroService.dismiss(); return "dismissed" }
     }
 
     property IpcHandler _calendar: IpcHandler {
@@ -220,5 +226,19 @@ QtObject {
             NotificationService.dnd = !NotificationService.dnd
             return NotificationService.dnd ? "on" : "off"
         }
+        function togglePeace(): string {
+            NotificationService.peace = !NotificationService.peace
+            NotificationService.save()
+            return NotificationService.peace ? "on" : "off"
+        }
+    }
+
+    property IpcHandler _nightLight: IpcHandler {
+        target: "nightlight"
+        function toggle(): string {
+            NightLightService.toggle()
+            return NightLightService.on ? "on" : "off"
+        }
+        function state(): string { return NightLightService.on ? "on" : "off" }
     }
 }

@@ -21,3 +21,5 @@ singleton PolkitService 1.0 PolkitService.qml
 singleton MonitorService 1.0 MonitorService.qml
 singleton AgentUsageService 1.0 AgentUsageService.qml
 singleton WallpaperLibrary 1.0 WallpaperLibrary.qml
+singleton NightLightService 1.0 NightLightService.qml
+singleton SystemService 1.0 SystemService.qml

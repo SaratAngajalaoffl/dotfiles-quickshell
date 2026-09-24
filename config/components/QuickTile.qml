@@ -16,11 +16,16 @@ Rectangle {
     signal toggled()
     signal opened()
 
+    // On, the whole tile fills with the accent; off, it's a quiet card.
+    readonly property bool lit: active || !toggleable
+    readonly property color ink: lit ? Theme.crust : Theme.text
+
     height: 60
     radius: height / 2
-    color: tileHover.hovered ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
-                             : Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.045)
-    border.width: 1
+    color: lit ? (tileHover.hovered ? Qt.lighter(Theme.accent, 1.08) : Theme.accent)
+         : tileHover.hovered ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
+         : Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.045)
+    border.width: lit ? 0 : 1
     border.color: Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.06)
 
     Behavior on color { ColorAnimation { duration: Theme.animFast } }
@@ -30,21 +35,23 @@ Rectangle {
 
     Rectangle {
         id: bubble
-        anchors { left: parent.left; leftMargin: 9; verticalCenter: parent.verticalCenter }
-        width: 42
-        height: 42
-        radius: 21
-        color: tile.active || !tile.toggleable ? Theme.accent : Theme.surface1
+        anchors { left: parent.left; leftMargin: 8; verticalCenter: parent.verticalCenter }
+        width: 40
+        height: 40
+        radius: 20
+        color: tile.lit ? Qt.rgba(Theme.crust.r, Theme.crust.g, Theme.crust.b, bubbleHover.hovered ? 0.24 : 0.14)
+             : bubbleHover.hovered ? Theme.surface2 : Theme.surface1
 
         Behavior on color { ColorAnimation { duration: Theme.animFast } }
 
         CenteredIcon {
             anchors.centerIn: parent
             text: tile.glyph
-            color: tile.active || !tile.toggleable ? Theme.crust : Theme.text
-            size: 18
+            color: tile.ink
+            size: 16
         }
 
+        HoverHandler { id: bubbleHover }
         // The bubble is the deeper item, so its handler takes the tap first.
         TapHandler { onTapped: tile.toggleable ? tile.toggled() : tile.opened() }
     }
@@ -52,9 +59,9 @@ Rectangle {
     Column {
         anchors {
             left: bubble.right
-            leftMargin: 10
+            leftMargin: 9
             right: parent.right
-            rightMargin: 14
+            rightMargin: 10
             verticalCenter: parent.verticalCenter
         }
         spacing: 2
@@ -62,7 +69,7 @@ Rectangle {
         Text {
             width: parent.width
             text: tile.title
-            color: Theme.text
+            color: tile.ink
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeLarge
             font.bold: true
@@ -71,7 +78,8 @@ Rectangle {
         Text {
             width: parent.width
             text: tile.subtitle
-            color: Theme.subtext0
+            color: tile.ink
+            opacity: tile.lit ? 0.75 : 0.6
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall
             elide: Text.ElideRight

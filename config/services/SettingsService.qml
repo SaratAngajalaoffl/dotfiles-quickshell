@@ -69,6 +69,8 @@ QtObject {
     property int    animDuration: 320
     // Control center opens on hover of the notch (true) or on click (false).
     property bool   ccOpenOnHover: false
+    // Audio page: per-application volume and device routing.
+    property bool   audioPerApp: false
 
     // ── Applying ────────────────────────────────────────────────────────────
 
@@ -236,7 +238,8 @@ QtObject {
             workspaceMonitors: root.workspaceMonitors,
             barHeight: root.barHeight,
             animDuration: root.animDuration,
-            ccOpenOnHover: root.ccOpenOnHover
+            ccOpenOnHover: root.ccOpenOnHover,
+            audioPerApp: root.audioPerApp
         }
     }
 
@@ -296,6 +299,7 @@ QtObject {
         cursorTrail = 3; backgroundOpacity = 0.85; fontSize = 12; kittyMargin = 20
         barHeight = 40; animDuration = 320
         ccOpenOnHover = false
+        audioPerApp = false
         commit()
     }
 

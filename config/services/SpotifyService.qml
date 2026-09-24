@@ -21,7 +21,7 @@ QtObject {
     readonly property string scriptDir: home + "/.config/quickshell/scripts"
     readonly property string searchScript: scriptDir + "/spotify-search.sh"
     readonly property string ctlScript: scriptDir + "/spotify-ctl.sh"
-    readonly property string playlistsFile: scriptDir + "/spotify-playlists.json"
+    readonly property string playlistsScript: scriptDir + "/spotify-playlists.sh"
 
     // ── Playback state ──────────────────────────────────────────────────────
     property bool   running: false
@@ -40,15 +40,17 @@ QtObject {
         ? Math.min(1, positionMs / durationMs) : 0
 
     // ── Search ──────────────────────────────────────────────────────────────
+    // Each result: {kind: track|artist|album|playlist, uri, name, artist, art}.
     property var results: []
     property bool searching: false
     property string searchError: ""
 
     // ── Playlists ───────────────────────────────────────────────────────────
+    // Pinned in scripts/spotify-playlists.json; the script adds cover art.
     property var playlists: []
 
     property Process _playlistRead: Process {
-        command: ["cat", root.playlistsFile]
+        command: ["bash", root.playlistsScript]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -151,43 +153,66 @@ QtObject {
 
     // ── Search ──────────────────────────────────────────────────────────────
 
+    // One search runs at a time. Typing while one is in flight only records
+    // the newest query (`_wanted`); when the running search ends, a stale one
+    // is followed straight away by the newest. (Previously the new command
+    // was set on a process that was still running, so it never ran and the
+    // list kept showing an older query's results.)
+    property string _wanted: ""
+    property string _running: ""
+
     property Process _search: Process {
         stdout: StdioCollector {
             onStreamFinished: {
-                root.searching = false
                 try {
-                    root.results = JSON.parse(text)
-                    root.searchError = ""
-                } catch (e) {
-                    root.results = []
-                }
+                    var o = JSON.parse(text)
+                    if (o.query === root._wanted) {
+                        root.results = o.results || []
+                        root.searchError = ""
+                    }
+                } catch (e) { /* reported from onExited */ }
             }
         }
+        stderr: StdioCollector {
+            onStreamFinished: if (text.trim() !== "") console.warn("spotify-search:", text.trim())
+        }
         onExited: function (code) {
+            if (root._wanted !== root._running && root._wanted !== "") {
+                root._start()
+                return
+            }
             root.searching = false
             // `secret-tool` exits 0 with empty output when the entry is absent,
-            // and the script then fails a few lines later, so distinguish the
-            // two cases for the user rather than showing a generic error.
+            // and the script then fails a few lines later, so point at the
+            // keyring rather than showing a generic error.
             if (code !== 0)
-                root.searchError = root.results.length === 0
-                    ? "search failed — are the Spotify secrets in the keyring?"
-                    : ""
+                root.searchError = "Search failed — are the Spotify secrets in the keyring?"
         }
     }
 
     function search(query) {
-        if (!query || query.length < 2) {
+        query = (query || "").trim()
+        root._wanted = query.length < 2 ? "" : query
+        if (root._wanted === "") {
             root.results = []
+            root.searching = false
             return
         }
         root.searching = true
-        _search.command = ["bash", root.searchScript, query]
+        if (!_search.running) root._start()
+    }
+
+    function _start() {
+        root._running = root._wanted
+        _search.command = ["bash", root.searchScript, root._running]
         _search.running = true
     }
 
     function clearSearch() {
+        root._wanted = ""
         root.results = []
         root.searching = false
+        root.searchError = ""
     }
 
     Component.onCompleted: _playlistRead.running = true

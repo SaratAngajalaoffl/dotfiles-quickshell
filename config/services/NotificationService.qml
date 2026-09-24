@@ -36,6 +36,12 @@ QtObject {
     // recorded, so nothing is silently lost while DND is on.
     property bool dnd: false
 
+    // Peace: notifications still pop up and land in the panel, they just
+    // don't make a sound. (DND silences them too, since it hides the toast.)
+    property bool peace: false
+
+    readonly property string soundDir: "/usr/share/sounds/freedesktop/stereo"
+
     // Suppress toasts during the first moments after startup so a restart
     // doesn't replay a wall of toasts for already-recorded notifications.
     property bool _ready: false
@@ -104,6 +110,7 @@ QtObject {
         if (!root.dnd && root._ready) {
             root.toastRequested(n)
             root._showToast(Object.assign({ image: n.image || "" }, entry))
+            root._chime(entry.urgency)
         }
 
         root.save()
@@ -113,7 +120,9 @@ QtObject {
     // reminders, ...). Unlike an incoming D-Bus notification there is no live
     // handle, so the card is text-only — but it still lands in the persistent
     // panel and survives a restart, which is the point.
-    function notify(summary, body) {
+    // `quiet`: record it without the island popping up (the caller shows its
+    // own, e.g. the pomodoro alarm).
+    function notify(summary, body, quiet) {
         var entry = {
             id:        "n" + (++root._uid) + "-" + Date.now(),
             nid:       0,
@@ -129,9 +138,25 @@ QtObject {
         root.active = [entry].concat(root.active)
         root.unreadCount = root.unreadCount + 1
         root.save()
-        if (!root.dnd && root._ready)
+        if (!quiet && !root.dnd && root._ready) {
             root._showToast(Object.assign({ image: "" }, entry))
+            root._chime(entry.urgency)
+        }
         return entry.id
+    }
+
+    // ── Sound ───────────────────────────────────────────────────────────────
+    // freedesktop sound theme (sound-theme-freedesktop). A burst of arrivals
+    // restarts the one player rather than stacking chimes.
+    property Process _player: Process {}
+
+    function _chime(urgency) {
+        if (root.peace) return
+        var file = urgency === NotificationUrgency.Critical
+            ? "dialog-warning.oga" : "message-new-instant.oga"
+        _player.running = false
+        _player.command = ["pw-play", root.soundDir + "/" + file]
+        _player.running = true
     }
 
     // ── Island countdown ────────────────────────────────────────────────────
@@ -326,7 +351,8 @@ QtObject {
             active:  root.active,
             history: root.history,
             unread:  root.unreadCount,
-            dnd:     root.dnd
+            dnd:     root.dnd,
+            peace:   root.peace
         })
         _writer.command = ["bash", "-c",
             "mkdir -p '" + root.stateDir + "' && " +
@@ -383,6 +409,7 @@ QtObject {
                 return !e.read
             }).length
             root.dnd = obj.dnd === true
+            root.peace = obj.peace === true
         } catch (e) {
             console.warn("notifications: restore failed:", e)
         }

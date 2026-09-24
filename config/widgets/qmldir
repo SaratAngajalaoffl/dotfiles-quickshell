@@ -9,3 +9,5 @@ AgentsWidget 1.0 AgentsWidget.qml
 ClipboardWidget 1.0 ClipboardWidget.qml
 EmojiWidget 1.0 EmojiWidget.qml
 ThemeWidget 1.0 ThemeWidget.qml
+PomodoroWidget 1.0 PomodoroWidget.qml
+PomodoroAlarmWidget 1.0 PomodoroAlarmWidget.qml

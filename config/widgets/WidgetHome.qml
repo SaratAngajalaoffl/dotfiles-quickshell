@@ -1,7 +1,10 @@
 // The island's home: a grid of every non-hidden Registry widget. Click, or arrow keys
-// + Enter, to open one; Escape from that widget comes back here.
+// + Enter, to open one; Escape from that widget comes back here. Above it, a
+// header: the user's ~/.face, user@host, and how long the machine has been up.
 import QtQuick
+import Quickshell.Widgets
 import "../theme"
+import "../services"
 import "../state"
 import "../components"
 import "."
@@ -17,14 +20,74 @@ Item {
     readonly property int rows: Math.ceil(Registry.pickable.length / columns)
 
     implicitWidth:  columns * cell + pad * 2
-    implicitHeight: rows * cell + pad * 2
+    implicitHeight: header.height + 8 + 12 + rows * cell + pad * 2
 
-    onActiveChanged: if (active) { grid.currentIndex = 0; grid.forceActiveFocus() }
+    onActiveChanged: if (active) {
+        grid.currentIndex = 0
+        grid.forceActiveFocus()
+        SystemService.refresh()
+    }
+
+    // ── Header ──────────────────────────────────────────────────────────────
+    Column {
+        id: header
+        anchors { top: parent.top; left: parent.left; right: parent.right; margins: root.pad }
+        anchors.topMargin: root.pad + 8
+        spacing: 4
+
+        ClippingRectangle {
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: 104
+            height: width
+            radius: width / 2
+            color: Theme.hover
+
+            Image {
+                id: face
+                anchors.fill: parent
+                source: SystemService.face
+                sourceSize: Qt.size(208, 208)
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+            }
+
+            // No ~/.face: fall back to the user's initial.
+            Text {
+                anchors.centerIn: parent
+                visible: face.status !== Image.Ready
+                text: SystemService.user.charAt(0).toUpperCase()
+                color: Theme.accent
+                font.family: Theme.fontFamily
+                font.pixelSize: 40
+                font.bold: true
+            }
+        }
+
+        Item { width: 1; height: 6 }
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: SystemService.user + (SystemService.host !== "" ? "@" + SystemService.host : "")
+            color: Theme.text
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeLarge
+            font.bold: true
+        }
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "Running since " + SystemService.uptime
+            visible: SystemService.uptimeSec > 0
+            color: Theme.subtext0
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeSmall
+        }
+    }
 
     GridView {
         id: grid
-        anchors.fill: parent
+        anchors { top: header.bottom; left: parent.left; right: parent.right; bottom: parent.bottom }
         anchors.margins: root.pad
+        anchors.topMargin: 12
         cellWidth: root.cell
         cellHeight: root.cell
         interactive: false

@@ -82,14 +82,10 @@ QtObject {
 
     property int popupPadding:      Metrics.popupPadding
     property int popupWidth:        Metrics.popupWidth
-    property int spotifyWidth:      Metrics.spotifyWidth
     property int cornerRadiusSmall: Metrics.cornerRadiusSmall
-    property int notificationsWidth: Metrics.notificationsWidth
     property int networkPopupWidth: Metrics.networkPopupWidth
     property int launcherWidth:     Metrics.launcherWidth
     property int launcherMaxHeight: Metrics.launcherMaxHeight
-    property int emojiWidth:        Metrics.emojiWidth
-    property int emojiMaxHeight:    Metrics.emojiMaxHeight
 
     property int ccWidth:         Metrics.ccWidth
     property int ccHeight:        Metrics.ccHeight

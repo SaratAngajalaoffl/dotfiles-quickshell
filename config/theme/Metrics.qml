@@ -28,17 +28,13 @@ QtObject {
     // ── Popup sizing ────────────────────────────────────────────────────────
     property int popupPadding: 16
     property int popupWidth: 400
-    property int notificationsWidth: 400
     property int networkPopupWidth: 480
     property int launcherWidth: 520
     property int launcherMaxHeight: 420
-    property int emojiWidth: 360
-    property int emojiMaxHeight: 400
-    property int spotifyWidth: 420
 
     // ── Control center ──────────────────────────────────────────────────────
-    property int ccWidth: 420          // every page, so the panel keeps one shape
-    property int ccHeight: 560
+    property int ccWidth: 560          // every page, so the panel keeps one shape
+    property int ccHeight: 680
     property int ccPadding: 14
     property int ccRadius: 24          // bottom-left corner once expanded
     property int ccCardRadius: 18

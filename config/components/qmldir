@@ -1,7 +1,6 @@
 Icon 1.0 Icon.qml
 IconButton 1.0 IconButton.qml
 Divider 1.0 Divider.qml
-PopupSlide 1.0 PopupSlide.qml
 PopupPanel 1.0 PopupPanel.qml
 Slider 1.0 Slider.qml
 ListRow 1.0 ListRow.qml
@@ -11,3 +10,4 @@ PillSlider 1.0 PillSlider.qml
 CenteredIcon 1.0 CenteredIcon.qml
 QuickTile 1.0 QuickTile.qml
 TabBar 1.0 TabBar.qml
+Cover 1.0 Cover.qml

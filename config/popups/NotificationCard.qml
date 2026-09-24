@@ -25,20 +25,17 @@ Item {
     signal remove()
     signal action(string actionId)
 
-    implicitHeight: row.implicitHeight + 20
+    implicitHeight: row.implicitHeight + 24
 
-    // Unread cards get a subtle wash + accent rail.
+    // A card of its own; unread ones get an urgency-tinted outline.
     Rectangle {
         anchors.fill: parent
-        color: card.unread ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.06)
-                           : "transparent"
-    }
-
-    Rectangle {
-        anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
-        width: 3
-        visible: card.unread
-        color: card.urgencyColor
+        radius: 14
+        color: card.unread ? Qt.rgba(card.urgencyColor.r, card.urgencyColor.g, card.urgencyColor.b, 0.06)
+                           : Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.045)
+        border.width: 1
+        border.color: card.unread ? Qt.rgba(card.urgencyColor.r, card.urgencyColor.g, card.urgencyColor.b, 0.35)
+                                  : Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.06)
     }
 
     readonly property color urgencyColor: {
@@ -54,7 +51,7 @@ Item {
         anchors {
             left: parent.left;  leftMargin: 12
             right: parent.right; rightMargin: 8
-            top: parent.top;    topMargin: 10
+            top: parent.top;    topMargin: 12
         }
         spacing: 10
         height: Math.max(iconArea.height, textCol.implicitHeight)

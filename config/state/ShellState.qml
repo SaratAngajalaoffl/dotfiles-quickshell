@@ -14,8 +14,6 @@ QtObject {
     property bool audioOpen:         false
     property bool bluetoothOpen:     false
     property bool networkOpen:       false
-    property bool clipboardOpen:     false
-    property bool emojiOpen:         false
     property bool spotifyOpen:       false
     property bool controlCenterOpen: false
 
@@ -51,8 +49,6 @@ QtObject {
         audio:         "audioOpen",
         bluetooth:     "bluetoothOpen",
         network:       "networkOpen",
-        clipboard:     "clipboardOpen",
-        emoji:         "emojiOpen",
         spotify:       "spotifyOpen",
         controlCenter: "controlCenterOpen",
         island:        "islandOpen"
@@ -66,9 +62,8 @@ QtObject {
     readonly property var _ccPages: ({
         network:       "network",
         bluetooth:     "bluetooth",
-        clipboard:     "clipboard",
-        emoji:         "emoji",
         audio:         "audio",
+        spotify:       "spotify",
         notifications: "main"
     })
 
@@ -96,21 +91,28 @@ QtObject {
         root.islandOpen = true
     }
 
-    // A new notification: show it in the island without closing anything
-    // else, and only if the island isn't busy with a widget you opened (the
-    // bell badge still counts it then).
-    function showNotification() {
-        if (root.islandOpen && root.islandWidget !== "notification") return
+    // Passive widgets (Registry `passive`): shown without closing anything
+    // else, and only if the island isn't busy with a widget you opened. The
+    // pomodoro alarm may replace a notification, never the other way round.
+    readonly property var _passiveRank: ({ "notification": 1, "pomodoro-alarm": 2 })
+
+    function showPassive(widget) {
+        if (root.islandOpen && root.islandWidget !== widget
+                && !((root._passiveRank[root.islandWidget] || 99) < (root._passiveRank[widget] || 0)))
+            return
         root.islandFromHome = false
-        root.islandWidget = "notification"
+        root.islandWidget = widget
         root.islandOpen = true
     }
 
-    // Hide the notification, leaving any other widget alone.
-    function hideNotification() {
-        if (root.islandOpen && root.islandWidget === "notification")
+    // Hide a passive widget, leaving any other widget alone.
+    function hidePassive(widget) {
+        if (root.islandOpen && root.islandWidget === widget)
             root.islandOpen = false
     }
+
+    function showNotification() { root.showPassive("notification") }
+    function hideNotification() { root.hidePassive("notification") }
 
     // Same widget again closes the island; anything else switches to it.
     function toggleWidget(widget) {
@@ -186,7 +188,7 @@ QtObject {
     }
 
     function close(name) {
-        // A page closing itself (clipboard entry picked, emoji copied) is done
+        // A page closing itself is done
         // with the whole control center, not just that page.
         if (root._ccPages[name] !== undefined || name === "controlCenter") {
             if (root.controlCenterOpen) root.closeAll()

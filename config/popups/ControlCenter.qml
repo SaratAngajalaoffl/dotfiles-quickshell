@@ -1,5 +1,5 @@
 // Control center: the right notch morphs into a panel, on click or on hover
-// (SettingsService.ccOpenOnHover, toggled from the panel's footer).
+// (SettingsService.ccOpenOnHover).
 //
 // The window sits over the bar's top-right corner. Collapsed, its body is
 // shaped exactly like the bar's right notch and carries the status pill, so
@@ -79,7 +79,7 @@ PanelWindow {
     // bar collapses to a strip), or while a collapse is still animating.
     visible: !ShellState.focusMode || root.open || root.progress > 0
 
-    // Keys while open: search fields (emoji) and Escape work straight away.
+    // Keys while open: Escape works straight away.
     WlrLayershell.keyboardFocus: root.open ? WlrKeyboardFocus.Exclusive
                                            : WlrKeyboardFocus.None
 
@@ -103,7 +103,7 @@ PanelWindow {
 
     // Refresh cached lists the main page reads, whenever the panel opens.
     onOpenChanged: {
-        if (open) ClipboardService.refresh()
+        if (open) NightLightService.refresh()
         else _pointerSeen = false
     }
 
@@ -248,14 +248,11 @@ PanelWindow {
             Page { name: "bluetooth"
                 BluetoothPopup { width: parent.width; embedded: true }
             }
-            Page { name: "clipboard"
-                ClipboardPopup { width: parent.width; embedded: true }
-            }
-            Page { name: "emoji"
-                EmojiPopup { width: parent.width; embedded: true }
-            }
             Page { name: "audio"
                 AudioPopup { width: parent.width; embedded: true }
+            }
+            Page { name: "spotify"
+                SpotifyPopup { width: parent.width; embedded: true }
             }
         }
     }

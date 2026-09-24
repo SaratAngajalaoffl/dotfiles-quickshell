@@ -1,5 +1,7 @@
-// Now-playing via MPRIS. Replaces waybar's custom/playback module and its
-// current_playback.sh / should_show_playback.sh scripts.
+// Now-playing for the island: Spotify (via SpotifyService / `soloist ctl`,
+// which has no MPRIS) merged with any MPRIS player (browser tabs, etc.).
+// Replaces waybar's custom/playback module and its current_playback.sh /
+// should_show_playback.sh scripts.
 pragma Singleton
 import QtQuick
 import Quickshell
@@ -8,8 +10,8 @@ import Quickshell.Services.Mpris
 QtObject {
     id: root
 
-    // Prefer a player that is actually playing, so a paused Spotify window
-    // doesn't hide a playing browser tab.
+    // Prefer an MPRIS player that is actually playing, so a paused browser
+    // tab doesn't hide a playing one.
     readonly property var player: {
         var players = Mpris.players.values
         if (players.length === 0)
@@ -20,16 +22,28 @@ QtObject {
         return players[0]
     }
 
-    readonly property bool active: !!player && player.trackTitle !== ""
+    readonly property bool _spotifyHasTrack: SpotifyService.running && SpotifyService.title !== ""
 
-    readonly property string title:  player ? (player.trackTitle || "") : ""
-    readonly property string artist: player ? (player.trackArtist || "") : ""
-    readonly property string album:  player ? (player.trackAlbum || "") : ""
-    readonly property string artUrl: player ? (player.trackArtUrl || "") : ""
+    // Spotify wins while it plays, or while it's paused and no MPRIS player
+    // is playing.
+    readonly property bool useSpotify: _spotifyHasTrack
+        && (SpotifyService.playing || !(player && player.isPlaying))
 
-    readonly property bool playing: player ? player.isPlaying : false
+    readonly property bool active: useSpotify || (!!player && player.trackTitle !== "")
 
-    readonly property string glyph: playing ? "\uf04b" : "\uf04c"   // play / pause
+    readonly property string title:  useSpotify ? SpotifyService.title
+                                   : player ? (player.trackTitle || "") : ""
+    readonly property string artist: useSpotify ? SpotifyService.artist
+                                   : player ? (player.trackArtist || "") : ""
+    readonly property string album:  useSpotify ? ""
+                                   : player ? (player.trackAlbum || "") : ""
+    readonly property string artUrl: useSpotify ? SpotifyService.artUrl
+                                   : player ? (player.trackArtUrl || "") : ""
+
+    readonly property bool playing: useSpotify ? SpotifyService.playing
+                                  : player ? player.isPlaying : false
+
+    readonly property string glyph: playing ? "" : ""   // play / pause
 
     // Truncated "title · artist" for the bar.
     readonly property string label: {
@@ -39,22 +53,25 @@ QtObject {
         return a === "" ? t : t + "  ·  " + a
     }
 
-    readonly property bool canToggle: player ? player.canTogglePlaying : false
-    readonly property bool canNext:   player ? player.canGoNext       : false
-    readonly property bool canPrev:   player ? player.canGoPrevious   : false
+    readonly property bool canToggle: useSpotify || (player ? player.canTogglePlaying : false)
+    readonly property bool canNext:   useSpotify || (player ? player.canGoNext       : false)
+    readonly property bool canPrev:   useSpotify || (player ? player.canGoPrevious   : false)
 
     function toggle() {
-        if (player && player.canTogglePlaying)
+        if (useSpotify) SpotifyService.toggle()
+        else if (player && player.canTogglePlaying)
             player.togglePlaying()
     }
 
     function next() {
-        if (player && player.canGoNext)
+        if (useSpotify) SpotifyService.next()
+        else if (player && player.canGoNext)
             player.next()
     }
 
     function previous() {
-        if (player && player.canGoPrevious)
+        if (useSpotify) SpotifyService.previous()
+        else if (player && player.canGoPrevious)
             player.previous()
     }
 }

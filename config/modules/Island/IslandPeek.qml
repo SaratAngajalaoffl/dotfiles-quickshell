@@ -1,5 +1,5 @@
 // The island on hover: now playing on the left, clock and date in the
-// middle, RAM usage on the right.
+// middle, prev / play-pause / next on the right.
 //
 // Controls here use MouseArea rather than TapHandler on purpose: a MouseArea
 // that takes the press cancels the island's own TapHandler, so clicking
@@ -143,49 +143,55 @@ Item {
         }
     }
 
-    // ── RAM ─────────────────────────────────────────────────────────────────
+    // ── Media controls ──────────────────────────────────────────────────────
     Rectangle {
         anchors { right: parent.right; rightMargin: root.pad; verticalCenter: parent.verticalCenter }
-        width: ram.implicitWidth + 24
+        width: controls.implicitWidth + 8
         height: 34
         radius: height / 2
         color: Theme.hover
+        opacity: MediaService.active ? 1 : 0.5
 
         Row {
-            id: ram
+            id: controls
             anchors.centerIn: parent
-            spacing: 8
+            spacing: 2
 
-            Icon {
-                anchors.verticalCenter: parent.verticalCenter
-                text: "\uf2db"
-                color_: MemoryService.fraction > 0.85 ? Theme.urgent : Theme.accent
-                font.pixelSize: 14
-            }
+            Repeater {
+                model: [
+                    { glyph: "\uf048", enabled: MediaService.canPrev,   action: "previous" },
+                    { glyph: MediaService.playing ? "\uf04c" : "\uf04b",
+                                        enabled: MediaService.canToggle, action: "toggle" },
+                    { glyph: "\uf051", enabled: MediaService.canNext,   action: "next" }
+                ]
 
-            // Fill meter, turns urgent past 85%.
-            Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
-                width: 34
-                height: 6
-                radius: 3
-                color: Theme.surface
+                delegate: Rectangle {
+                    id: button
+                    required property var modelData
+                    width: 30
+                    height: 30
+                    radius: height / 2
+                    color: buttonMouse.containsMouse && modelData.enabled
+                           ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.16)
+                           : "transparent"
+                    Behavior on color { ColorAnimation { duration: Theme.animFast } }
 
-                Rectangle {
-                    width: parent.width * MemoryService.fraction
-                    height: parent.height
-                    radius: parent.radius
-                    color: MemoryService.fraction > 0.85 ? Theme.urgent : Theme.accent
-                    Behavior on width { NumberAnimation { duration: Theme.animDuration } }
+                    Icon {
+                        anchors.centerIn: parent
+                        text: button.modelData.glyph
+                        color_: !button.modelData.enabled ? Theme.subtext0
+                              : buttonMouse.containsMouse ? Theme.accent : Theme.text
+                        font.pixelSize: 13
+                    }
+
+                    MouseArea {
+                        id: buttonMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: button.modelData.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onClicked: if (button.modelData.enabled) MediaService[button.modelData.action]()
+                    }
                 }
-            }
-
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: MemoryService.percent + "%"
-                color: Theme.text
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSize
             }
         }
     }

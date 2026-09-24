@@ -10,7 +10,10 @@
 # $XDG_RUNTIME_DIR (see systemd/.setup for the one-time store commands).
 #
 # Usage: spotify-search.sh "<query>"
-# Emits a JSON array of {uri, name, artist}.
+# Emits a JSON array of {kind, uri, name, artist, art}, where kind is one of
+# track | album | playlist | artist and art is the smallest cover URL (or "").
+# The query is echoed back as {query, results} so the caller can drop answers
+# to a query it has since moved past.
 set -euo pipefail
 
 cache_dir="${XDG_RUNTIME_DIR:-/tmp}/quickshell-spotify"
@@ -64,6 +67,16 @@ fi
 encoded=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$query")
 token=$(access_token)
 
-curl -fsS "https://api.spotify.com/v1/search?q=${encoded}&type=track&limit=8" \
+# Playlist searches can return null items; drop those. `images` is sorted
+# largest first, so the last one is the thumbnail.
+curl -fsS "https://api.spotify.com/v1/search?q=${encoded}&type=track,artist,album,playlist&limit=5" \
   -H "Authorization: Bearer $token" |
-  jq -c '[.tracks.items[] | {uri, name, artist: (.artists | map(.name) | join(", "))}]'
+  jq -c --arg q "$query" '
+    def art: ((. // []) | last | .url) // "";
+    def items(k): (.[k].items // []) | map(select(. != null));
+    {query: $q, results: (
+      [items("tracks")[]    | {kind: "track",    uri, name, artist: (.artists | map(.name) | join(", ")), art: (.album.images | art)}] +
+      [items("artists")[]   | {kind: "artist",   uri, name, artist: "Artist",                               art: (.images | art)}] +
+      [items("albums")[]    | {kind: "album",    uri, name, artist: (.artists | map(.name) | join(", ")), art: (.images | art)}] +
+      [items("playlists")[] | {kind: "playlist", uri, name, artist: ("by " + (.owner.display_name // "Spotify")), art: (.images | art)}]
+    )}'
