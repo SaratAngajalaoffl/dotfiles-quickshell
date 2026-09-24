@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 """Usage stats for the Agents widget, printed as one JSON object.
 
-  claude   Claude subscription limits (session / weekly), from the same
-           endpoint Claude Code's /usage reads. Uses Claude Code's own OAuth
-           token from ~/.claude/.credentials.json, read-only: it is never
-           refreshed here, because refreshing rotates the refresh token and
-           would sign Claude Code out. If it has expired, running `claude`
-           renews it.
+  claude   Claude subscription limits (session / weekly) for every signed-in
+           account, from `claude-account usage` (dotfiles-bin), which owns
+           the tokens and knows which ones are safe to refresh.
 
   opencode OpenCode Go subscription limits (rolling 5-hour / weekly /
            monthly), from opencode.ai/zen/go/v1/usage — the same numbers as
@@ -20,7 +17,7 @@
            Credentials come from the keyring (see quickshell/.secrets).
 
 Each section carries `ok` and, when not ok, `error` (a short line for the
-widget), so one source failing never hides the other.
+widget), so one source failing never hides another.
 
 The 7-day Bifrost queries are slow (~15 s each on a busy week: the server
 scans every log row, and rankings also computes the previous week for
@@ -43,8 +40,7 @@ import urllib.parse
 import urllib.request
 
 HOME = os.path.expanduser("~")
-CLAUDE_CREDS = os.path.join(os.environ.get("CLAUDE_CONFIG_DIR", os.path.join(HOME, ".claude")),
-                            ".credentials.json")
+CLAUDE_ACCOUNT = os.path.join(HOME, ".local", "bin", "claude-account")
 BIFROST_URL = os.environ.get("BIFROST_URL", "http://10.43.226.225:8080").rstrip("/")
 RUNTIME = os.environ.get("XDG_RUNTIME_DIR") or "/tmp"
 TOKEN_FILE = os.path.join(RUNTIME, "quickshell", "bifrost-token")
@@ -75,72 +71,14 @@ def http(url, headers=None, body=None, method=None, timeout=TIMEOUT):
 
 
 # ── Claude ──────────────────────────────────────────────────────────────────
-MODEL_WINDOWS = {  # weekly per-model limits, shown when the plan has them
-    "seven_day_opus": "Opus",
-    "seven_day_sonnet": "Sonnet",
-}
-
-
-def window(w):
-    if not w or w.get("utilization") is None:
-        return None
-    return {"percent": w["utilization"], "resets_at": w.get("resets_at")}
-
-
 def claude():
     try:
-        with open(CLAUDE_CREDS) as f:
-            oauth = json.load(f)["claudeAiOauth"]
-    except (OSError, KeyError, ValueError):
-        return {"ok": False, "error": "Not signed in to Claude Code"}
-
-    out = {"plan": oauth.get("subscriptionType") or ""}
-    expires = (oauth.get("expiresAt") or 0) / 1000
-    if expires and expires < dt.datetime.now().timestamp():
-        return {**out, "ok": False, "error": "Sign-in expired, run claude to renew it"}
-
-    try:
-        u, _ = http("https://api.anthropic.com/api/oauth/usage", {
-            "Authorization": "Bearer " + oauth["accessToken"],
-            "anthropic-beta": "oauth-2025-04-20",
-            "User-Agent": "quickshell-agents",
-        })
-    except Unauthorized:
-        return {**out, "ok": False, "error": "Sign-in rejected, run claude to renew it"}
-    except RuntimeError as e:
-        return {**out, "ok": False, "error": f"Usage API {e}"}
-
-    severity = {l.get("kind"): l.get("severity") for l in u.get("limits") or []}
-    session, weekly = window(u.get("five_hour")), window(u.get("seven_day"))
-    if session: session["severity"] = severity.get("session", "normal")
-    if weekly: weekly["severity"] = severity.get("weekly_all", "normal")
-
-    models = []
-    for key, name in MODEL_WINDOWS.items():
-        w = window(u.get(key))
-        if w:
-            models.append({"name": name, **w})
-
-    extra = u.get("extra_usage") or {}
-    places = extra.get("decimal_places") or 2
-    breakdown = [{"name": r.get("display_name"), "percent": r.get("percent", 0)}
-                 for r in (u.get("seven_day_breakdown") or {}).get("rows") or []
-                 if r.get("percent")]
-
-    return {
-        **out,
-        "ok": True,
-        "session": session,
-        "weekly": weekly,
-        "models": models,
-        "breakdown": breakdown,
-        "extra": {
-            "enabled": bool(extra.get("is_enabled")),
-            "used": (extra.get("used_credits") or 0) / 10 ** places,
-            "limit": (extra["monthly_limit"] / 10 ** places) if extra.get("monthly_limit") else None,
-            "currency": extra.get("currency") or "USD",
-        },
-    }
+        r = subprocess.run([CLAUDE_ACCOUNT, "usage"], capture_output=True, text=True, timeout=60)
+        return json.loads(r.stdout)
+    except FileNotFoundError:
+        return {"ok": False, "error": "claude-account isn't installed (dotfiles-bin)"}
+    except (subprocess.TimeoutExpired, ValueError):
+        return {"ok": False, "error": "claude-account usage failed"}
 
 
 # ── Keyring ─────────────────────────────────────────────────────────────────

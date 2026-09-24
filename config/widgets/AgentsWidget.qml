@@ -2,7 +2,8 @@
 // subscription, and what went through the Bifrost gateway. Data from
 // AgentUsageService; the subscriptions refresh every minute while this is
 // open, Bifrost every five. R or the refresh button fetches now; Tab /
-// Shift+Tab switch tabs.
+// Shift+Tab switch tabs. On the Claude tab, Left / Right pick an account and
+// Enter switches Claude Code to it (or saves it, when it's a new one).
 import QtQuick
 import "../theme"
 import "../state"
@@ -15,6 +16,28 @@ Item {
     property bool active: false
 
     readonly property var claude: AgentUsageService.claude
+    // Claude accounts: the picked one (claudePick) is shown, defaulting to
+    // the one Claude Code is signed in with.
+    readonly property var claudeAccounts: claude && claude.accounts ? claude.accounts : []
+    property string claudePick: ""
+    readonly property int claudeIndex: {
+        var i = claudeAccounts.findIndex(function (a) { return a.uuid === claudePick })
+        if (i < 0) i = claudeAccounts.findIndex(function (a) { return a.active })
+        return Math.max(0, i)
+    }
+    readonly property var account: claudeAccounts.length ? claudeAccounts[claudeIndex] : null
+    readonly property bool accountOk: !!account && account.ok
+    function pickAccount(step) {
+        var n = claudeAccounts.length
+        if (n > 1) claudePick = claudeAccounts[(claudeIndex + step + n) % n].uuid
+    }
+    // The header's button: save the signed-in account if it's new, else
+    // switch to the picked one.
+    function accountButton() {
+        if (!account) return
+        if (!account.saved) AgentUsageService.addClaudeAccount()
+        else if (!account.active) AgentUsageService.useClaudeAccount(account.uuid)
+    }
     readonly property var opencode: AgentUsageService.opencode
     readonly property var bifrost: AgentUsageService.bifrost
 
@@ -51,6 +74,14 @@ Item {
     Keys.onPressed: function (event) {
         if (event.key === Qt.Key_R) {
             AgentUsageService.refresh()
+            event.accepted = true
+        } else if (root.tabs[root.current].id === "claude"
+                   && (event.key === Qt.Key_Left || event.key === Qt.Key_Right)) {
+            root.pickAccount(event.key === Qt.Key_Right ? 1 : -1)
+            event.accepted = true
+        } else if (root.tabs[root.current].id === "claude"
+                   && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
+            root.accountButton()
             event.accepted = true
         } else if (event.key === Qt.Key_Tab) {
             root.select((root.current + 1) % root.tabs.length)
@@ -375,30 +406,95 @@ Item {
         id: claudePage
 
         Card {
-            CardHeader {
-                glyph: "✻"
-                glyphColor: "#d97757"
-                title: "Claude"
-                chip: root.claude && root.claude.plan ? root.claude.plan.charAt(0).toUpperCase() + root.claude.plan.slice(1) : ""
-                note: root.claude && root.claude.ok && root.claude.breakdown.length
-                      ? root.claude.breakdown.map(function (b) { return b.name + " " + b.percent + "%" }).join(" · ") + " of this week"
-                      : ""
+            // Header, with the picked account's state at the right end:
+            // signed in, or a button to switch Claude Code to it, or to save
+            // it when Claude Code is signed in to one that isn't saved yet.
+            Item {
+                width: parent.width
+                height: 30
+
+                CardHeader {
+                    glyph: "✻"
+                    glyphColor: "#d97757"
+                    title: "Claude"
+                    chip: root.account && root.account.plan ? root.account.plan.charAt(0).toUpperCase() + root.account.plan.slice(1) : ""
+                    note: root.account ? root.account.email : ""
+                }
+
+                Text {
+                    anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                    visible: !!root.account && root.account.active && root.account.saved
+                    text: "Signed in"
+                    color: Theme.subtext0
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSizeSmall
+                }
+
+                Rectangle {
+                    readonly property bool adding: !!root.account && !root.account.saved
+                    readonly property bool switching: AgentUsageService.accountAction !== ""
+
+                    anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                    visible: !!root.account && (adding || !root.account.active)
+                    width: useText.implicitWidth + 24
+                    height: 28
+                    radius: 14
+                    color: useArea.containsMouse && !switching ? Theme.accent : Theme.hover
+                    Behavior on color { ColorAnimation { duration: Theme.animFast } }
+
+                    Text {
+                        id: useText
+                        anchors.centerIn: parent
+                        text: parent.adding ? (parent.switching ? "Adding…" : "Add account")
+                            : parent.switching ? "Switching…" : "Use this account"
+                        color: useArea.containsMouse && !parent.switching ? Theme.crust : Theme.text
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSizeSmall
+                        font.bold: true
+                    }
+
+                    MouseArea {
+                        id: useArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.accountButton()
+                    }
+                }
             }
 
-            Status { data: root.claude }
+            // Account picker (● = the one Claude Code is signed in with),
+            // only when there's more than one to pick from.
+            TabBar {
+                visible: root.claudeAccounts.length > 1
+                tabs: root.claudeAccounts.map(function (a) {
+                    return { name: a.label, icon: a.active ? "\u25cf" : "" }
+                })
+                current: root.claudeIndex
+                onSelected: function (i) { root.claudePick = root.claudeAccounts[i].uuid }
+            }
+
+            Message {
+                visible: AgentUsageService.accountError !== ""
+                text: AgentUsageService.accountError
+                color: Theme.urgent
+            }
+
+            // The whole source failing (no accounts), else the picked account.
+            Status { data: root.claude && root.claude.ok ? root.account : root.claude }
 
             Row {
                 width: parent.width
                 spacing: 12
-                visible: !!root.claude && root.claude.ok
+                visible: root.accountOk
 
-                Gauge { label: "Session"; win: root.claude ? root.claude.session : null }
-                Gauge { label: "Weekly";  win: root.claude ? root.claude.weekly : null }
+                Gauge { label: "Session"; win: root.accountOk ? root.account.session : null }
+                Gauge { label: "Weekly";  win: root.accountOk ? root.account.weekly : null }
             }
 
             // Per-model weekly limits, on plans that have them.
             Repeater {
-                model: root.claude && root.claude.ok ? root.claude.models : []
+                model: root.accountOk ? root.account.models : []
                 Meter {
                     required property var modelData
                     label: modelData.name + " weekly"
@@ -409,10 +505,10 @@ Item {
             }
 
             Message {
-                visible: !!root.claude && root.claude.ok && root.claude.extra.enabled
-                text: root.claude && root.claude.extra
-                      ? "Extra usage on · " + root.money(root.claude.extra.used)
-                        + (root.claude.extra.limit ? " of " + root.money(root.claude.extra.limit) : "") + " spent"
+                visible: root.accountOk && root.account.extra.enabled
+                text: root.accountOk
+                      ? "Extra usage on · " + root.money(root.account.extra.used)
+                        + (root.account.extra.limit ? " of " + root.money(root.account.extra.limit) : "") + " spent"
                       : ""
             }
         }

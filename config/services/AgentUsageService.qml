@@ -1,6 +1,9 @@
 // Usage for the Agents widget: Claude and OpenCode Go subscription limits,
 // and Bifrost gateway stats, from scripts/agent-usage.py. Credentials stay in
-// the script — this only ever sees the numbers.
+// the script — this only ever sees the numbers. Claude can have several
+// accounts, through `claude-account` (dotfiles-bin): useClaudeAccount()
+// switches which one Claude Code signs in with, addClaudeAccount() saves the
+// one it's signed in with now.
 //
 // Each source is fetched on its own: the subscriptions (Claude, OpenCode)
 // are quick and polled every minute while the widget is on screen
@@ -26,6 +29,10 @@ QtObject {
     readonly property bool opencodeBusy: _opencode.running
     readonly property bool bifrostBusy: _bifrost.running
     readonly property bool busy: claudeBusy || opencodeBusy || bifrostBusy
+    // "use" or "add" while `claude-account` runs one.
+    readonly property string accountAction: _account.running ? _account.action : ""
+    // Why the last one failed, until the next one.
+    property string accountError: ""
 
     // Set by the widget while it is visible.
     property bool watching: false
@@ -36,6 +43,16 @@ QtObject {
         _bifrost.fetch()
     }
 
+    function useClaudeAccount(uuid) { _runAccount(["use", uuid]) }
+    function addClaudeAccount() { _runAccount(["add"]) }
+
+    function _runAccount(args) {
+        if (_account.running) return
+        accountError = ""
+        _account.args = args
+        _account.running = true
+    }
+
     function _fetchSubscriptions() {
         _claude.fetch()
         _opencode.fetch()
@@ -44,7 +61,11 @@ QtObject {
     component Fetch: Process {
         id: proc
         property string source
-        function fetch() { if (!running) running = true }
+        // A fetch asked for mid-run (say, after a switch) runs once this one
+        // ends, rather than being dropped for results that are already stale.
+        property bool again: false
+        function fetch() { if (running) again = true; else running = true }
+        onExited: if (again) { again = false; running = true }
 
         command: ["python3", root.script, source]
         stdout: StdioCollector {
@@ -63,6 +84,29 @@ QtObject {
     property Fetch _claude: Fetch { source: "claude" }
     property Fetch _opencode: Fetch { source: "opencode" }
     property Fetch _bifrost: Fetch { source: "bifrost" }
+
+    property Process _account: Process {
+        property var args: []
+        readonly property string action: args.length ? args[0] : ""
+        command: [Quickshell.env("HOME") + "/.local/bin/claude-account"].concat(args)
+
+        // stderr carries notes on success too, so it's only an error with a
+        // non-zero exit. Either may arrive first; settle() runs on both.
+        property int code: 0
+        property string err: ""
+        function settle() {
+            root.accountError = code !== 0 ? err.trim().replace(/^claude-account: /, "") : ""
+        }
+        onStarted: { code = 0; err = "" }
+        stderr: StdioCollector {
+            onStreamFinished: { root._account.err = text; root._account.settle() }
+        }
+        onExited: function (exitCode) {
+            code = exitCode
+            settle()
+            root._claude.fetch()
+        }
+    }
 
     property Timer _subscriptionPoll: Timer {
         interval: root.watching ? 60000 : 300000
