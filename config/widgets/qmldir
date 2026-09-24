@@ -3,3 +3,4 @@ WidgetHost 1.0 WidgetHost.qml
 WidgetHome 1.0 WidgetHome.qml
 Placeholder 1.0 Placeholder.qml
 LauncherWidget 1.0 LauncherWidget.qml
+PolkitWidget 1.0 PolkitWidget.qml

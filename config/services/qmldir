@@ -17,3 +17,4 @@ singleton SettingsService 1.0 SettingsService.qml
 singleton SpotifyService 1.0 SpotifyService.qml
 singleton ThemeService 1.0 ThemeService.qml
 singleton MemoryService 1.0 MemoryService.qml
+singleton PolkitService 1.0 PolkitService.qml

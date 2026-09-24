@@ -1,6 +1,6 @@
 // Every widget the island can open. This list is the only place a widget is
-// declared: the home grid renders it, and `qs ipc call island open <id>`
-// looks ids up here.
+// declared: the home grid renders the non-hidden ones, and
+// `qs ipc call island open <id>` looks ids up here.
 //
 // Adding a widget:
 //   1. Write widgets/<Name>Widget.qml following the contract in
@@ -19,6 +19,8 @@ QtObject {
     // name:   label on the home grid
     // icon:   Nerd Font glyph
     // source: QML file in this directory, "" until the widget exists
+    // hidden: (optional) left off the home grid — for widgets the shell opens
+    //         itself when needed (e.g. the polkit prompt), not ones you pick
     readonly property var widgets: [
         { id: "launcher",   name: "Apps",       icon: "\uf135", source: "LauncherWidget.qml" },
         { id: "theme",      name: "Themes",     icon: "\u{f03d8}", source: "" },
@@ -29,8 +31,12 @@ QtObject {
         { id: "emoji",      name: "Emoji",      icon: "\uf118", source: "" },
         { id: "pomodoro",   name: "Pomodoro",   icon: "\uf2f2", source: "" },
         { id: "calendar",   name: "Calendar",   icon: "\uf073", source: "" },
-        { id: "spotify",    name: "Spotify",    icon: "\uf1bc", source: "" }
+        { id: "spotify",    name: "Spotify",    icon: "\uf1bc", source: "" },
+        { id: "polkit",     name: "Authenticate", icon: "\uf023", source: "PolkitWidget.qml", hidden: true }
     ]
+
+    // What the home grid shows.
+    readonly property var pickable: widgets.filter(function (w) { return !w.hidden })
 
     // The grid of widgets itself; not listed above, so it never tiles itself.
     readonly property var home: ({ id: "home", name: "Widgets", icon: "\uf00a",

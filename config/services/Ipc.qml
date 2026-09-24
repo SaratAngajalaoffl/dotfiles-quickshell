@@ -80,6 +80,15 @@ QtObject {
         }
     }
 
+    property IpcHandler _polkitIpc: IpcHandler {
+        target: "polkit"
+        function status(): string {
+            return JSON.stringify({ registered: PolkitService.registered,
+                                    pending: PolkitService.pending })
+        }
+        function cancel(): string { PolkitService.cancel(); return "cancelled" }
+    }
+
     // Theme list + switching, so scripts stop needing a rofi dmenu.
     property IpcHandler _themes: IpcHandler {
         target: "themes"

@@ -1,4 +1,4 @@
-// The island's home: a grid of every Registry widget. Click, or arrow keys
+// The island's home: a grid of every non-hidden Registry widget. Click, or arrow keys
 // + Enter, to open one; Escape from that widget comes back here.
 import QtQuick
 import "../theme"
@@ -14,7 +14,7 @@ Item {
     readonly property int columns: 5
     readonly property int cell: 92
     readonly property int pad: 14
-    readonly property int rows: Math.ceil(Registry.widgets.length / columns)
+    readonly property int rows: Math.ceil(Registry.pickable.length / columns)
 
     implicitWidth:  columns * cell + pad * 2
     implicitHeight: rows * cell + pad * 2
@@ -30,10 +30,10 @@ Item {
         interactive: false
         focus: root.active
         keyNavigationWraps: true
-        model: Registry.widgets
+        model: Registry.pickable
 
-        Keys.onReturnPressed: ShellState.openWidget(Registry.widgets[currentIndex].id, true)
-        Keys.onEnterPressed:  ShellState.openWidget(Registry.widgets[currentIndex].id, true)
+        Keys.onReturnPressed: ShellState.openWidget(Registry.pickable[currentIndex].id, true)
+        Keys.onEnterPressed:  ShellState.openWidget(Registry.pickable[currentIndex].id, true)
 
         delegate: Item {
             id: tile

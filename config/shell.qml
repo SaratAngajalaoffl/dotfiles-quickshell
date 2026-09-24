@@ -14,6 +14,8 @@ ShellRoot {
     // Force-instantiate the singleton that registers the IPC handlers, so
     // `qs ipc call theme reload` works even before any popup is opened.
     property var _ipc: Ipc
+    // Likewise the polkit agent, which must be registered before any request.
+    property var _polkit: PolkitService
 
     Variants {
         model: Quickshell.screens
