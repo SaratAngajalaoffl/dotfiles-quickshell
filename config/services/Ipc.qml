@@ -131,7 +131,7 @@ QtObject {
         function toggle(): string { SpotifyService.toggle(); return "toggled" }
     }
 
-    // Settings + pomodoro + calendar, for scripting and diagnostics.
+    // Settings + pomodoro, for scripting and diagnostics.
     property IpcHandler _settings: IpcHandler {
         target: "settings"
         function get(): string { return JSON.stringify(SettingsService.snapshot()) }
@@ -175,14 +175,6 @@ QtObject {
         function next(): string { PomodoroService.startNext(); return PomodoroService.phase }
         function snooze(minutes: int): string { PomodoroService.snooze(minutes); return "snoozed" }
         function dismiss(): string { PomodoroService.dismiss(); return "dismissed" }
-    }
-
-    property IpcHandler _calendar: IpcHandler {
-        target: "calendar"
-        function title(): string { return CalendarService.title }
-        function cells(): string { return String(CalendarService.cells.length) }
-        function weeks(): string { return String(CalendarService.rows()) }
-        function firstWeek(): string { return String(CalendarService.firstWeekNumber) }
     }
 
     // Wallpaper control (diagnostics + scripting).

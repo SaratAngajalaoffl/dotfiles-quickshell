@@ -32,7 +32,7 @@ QtObject {
         { id: "clipboard",  name: "Clipboard",  icon: "\uf0ea", source: "ClipboardWidget.qml" },
         { id: "emoji",      name: "Emoji",      icon: "\uf118", source: "EmojiWidget.qml" },
         { id: "pomodoro",   name: "Pomodoro",   icon: "\uf2f2", source: "PomodoroWidget.qml" },
-        { id: "calendar",   name: "Calendar",   icon: "\uf073", source: "" },
+        { id: "stats",      name: "Stats",      icon: "\u{f0128}", source: "StatsWidget.qml" },
         { id: "polkit",     name: "Authenticate", icon: "\uf023", source: "PolkitWidget.qml", hidden: true },
         { id: "pomodoro-alarm", name: "Pomodoro alarm", icon: "\uf0f3", source: "PomodoroAlarmWidget.qml", hidden: true, passive: true },
         { id: "notification", name: "Notification", icon: "\uf0f3", source: "NotificationWidget.qml", hidden: true, passive: true }

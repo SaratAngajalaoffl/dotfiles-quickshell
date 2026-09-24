@@ -50,3 +50,17 @@ client, and for the Agents widget (`scripts/agent-usage.py`) an OpenCode API
 key (Go subscription limits) and the Bifrost admin login (gateway stats; set
 `BIFROST_URL` if the gateway moves off `http://10.43.226.225:8080`). Claude
 usage needs nothing extra — it reuses Claude Code's own sign-in.
+
+## Per-machine settings
+
+`config/local.json` (gitignored, so `~/.config/quickshell/local.json`) holds
+settings that differ per machine. Copy `config/local.example.json` to start;
+anything left out uses its default. Currently it only configures the Stats
+widget's Kubernetes section:
+
+- `stats.kubeconfig` — default `$KUBECONFIG`, else `~/.kube/config`
+- `stats.context` — default: the current context if its API server is on this
+  machine, else the first context that is. Remote contexts are never polled
+  unless named here, so a kubeconfig that also holds work clusters is safe.
+
+Until a local cluster is found, the widget shows a warning saying what to set.

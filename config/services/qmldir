@@ -12,7 +12,6 @@ singleton ClipboardService 1.0 ClipboardService.qml
 singleton AppService 1.0 AppService.qml
 singleton WallpaperService 1.0 WallpaperService.qml
 singleton PomodoroService 1.0 PomodoroService.qml
-singleton CalendarService 1.0 CalendarService.qml
 singleton SettingsService 1.0 SettingsService.qml
 singleton SpotifyService 1.0 SpotifyService.qml
 singleton ThemeService 1.0 ThemeService.qml
@@ -23,3 +22,4 @@ singleton AgentUsageService 1.0 AgentUsageService.qml
 singleton WallpaperLibrary 1.0 WallpaperLibrary.qml
 singleton NightLightService 1.0 NightLightService.qml
 singleton SystemService 1.0 SystemService.qml
+singleton StatsService 1.0 StatsService.qml
