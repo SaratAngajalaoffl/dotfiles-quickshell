@@ -97,6 +97,15 @@ Item {
         }
     }
 
+    // ── Theme picker ────────────────────────────────────────────────────────
+    RightPopup {
+        id: themePopup
+        open: root.active && ShellState.themeOpen
+        contentHeight: themeContent.implicitHeight
+
+        ThemePopup { id: themeContent; width: parent.width }
+    }
+
     // ── Spotify ─────────────────────────────────────────────────────────────
     RightPopup {
         id: spotifyPopup

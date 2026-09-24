@@ -1,9 +1,14 @@
-// Emoji database, parsed from the file rofi-emoji ships
-// (/usr/share/rofi-emoji/all_emojis.txt) so the picker has the same ~5000
-// entries without needing the plugin at runtime.
+// Emoji database, parsed from our own vendored copy of rofi-emoji's data
+// (config/data/emoji.tsv).
+//
+// It is VENDORED deliberately: the upstream data lives in /usr/share/rofi-emoji,
+// which the rofi-emoji package owns — and that package depends on `rofi`, which
+// is removed along with the rest of the old shell stack. Reading it from the
+// system path would leave this picker silently empty once rofi was uninstalled.
+// See config/data/README.md.
 //
 // Format, tab separated:
-//   <glyph> <group> <subgroup> <name> <keyword | keyword | ...>
+//   <glyph> <group> <name> <keyword | keyword | ...>
 pragma Singleton
 import QtQuick
 import Quickshell
@@ -12,7 +17,7 @@ import Quickshell.Io
 QtObject {
     id: root
 
-    property string source: "/usr/share/rofi-emoji/all_emojis.txt"
+    property string source: Quickshell.shellDir + "/data/emoji.tsv"
 
     property var all: []
     property bool loaded: false
@@ -39,7 +44,7 @@ QtObject {
             if (line === "")
                 continue
             var f = line.split("\t")
-            if (f.length < 4)
+            if (f.length < 3)
                 continue
             var glyph = f[0]
             // Some entries are duplicate renderings of the same glyph.
@@ -49,8 +54,8 @@ QtObject {
             out.push({
                 glyph:    glyph,
                 group:    f[1] || "",
-                name:     f[3] || "",
-                keywords: (f[4] || "").toLowerCase()
+                name:     f[2] || "",
+                keywords: (f[3] || "").toLowerCase()
             })
         }
         var gs = []

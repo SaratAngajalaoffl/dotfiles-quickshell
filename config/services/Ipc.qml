@@ -30,6 +30,16 @@ QtObject {
         return name
     }
 
+    // One-stop "the desktop changed underneath you, catch up" call, used by
+    // reload_all_services.sh (SUPER+SHIFT+R). Cheap operations only — it
+    // re-reads the palette and re-lists the things services cache from disk.
+    function reloadAll(): string {
+        Colors.reloadTheme()
+        WallpaperService.refresh()
+        AppService.load()
+        return "reloaded"
+    }
+
     // Handlers live as children so they are instantiated with the singleton.
     property IpcHandler _theme: IpcHandler {
         target: "theme"
@@ -37,10 +47,27 @@ QtObject {
         function current(): string { return Colors.mode }
     }
 
+    property IpcHandler _reload: IpcHandler {
+        target: "reload"
+        function all(): string { return reloadAll() }
+    }
+
     property IpcHandler _popups: IpcHandler {
         target: "popups"
         function closeAll(): string { return closeAllPopups() }
         function toggle(name: string): string { return togglePopup(name) }
+    }
+
+    // Theme list + switching, so scripts stop needing a rofi dmenu.
+    property IpcHandler _themes: IpcHandler {
+        target: "themes"
+        function count(): string { return String(ThemeService.themes.length) }
+        function current(): string { return ThemeService.current }
+        function list(): string {
+            return ThemeService.themes.map(function (t) { return t.name }).join("\n")
+        }
+        function set(name: string): string { ThemeService.apply(name); return name }
+        function refresh(): string { ThemeService.refresh(); return "loading" }
     }
 
     // Spotify, for scripting and diagnostics.

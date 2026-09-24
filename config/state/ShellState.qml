@@ -22,6 +22,7 @@ QtObject {
     property bool wallpaperOpen:     false
     property bool spotifyOpen:       false
     property bool calendarOpen:      false
+    property bool themeOpen:         false
 
     // Toasts are not part of the one-popup-at-a-time set: a toast can be on
     // screen while the notifications panel is open.
@@ -51,7 +52,8 @@ QtObject {
         dashboard:     "dashboardOpen",
         wallpaper:     "wallpaperOpen",
         spotify:       "spotifyOpen",
-        calendar:      "calendarOpen"
+        calendar:      "calendarOpen",
+        theme:         "themeOpen"
     })
 
     function anyOpen() {

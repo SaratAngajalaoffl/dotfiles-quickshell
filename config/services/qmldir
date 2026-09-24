@@ -16,3 +16,4 @@ singleton PomodoroService 1.0 PomodoroService.qml
 singleton CalendarService 1.0 CalendarService.qml
 singleton SettingsService 1.0 SettingsService.qml
 singleton SpotifyService 1.0 SpotifyService.qml
+singleton ThemeService 1.0 ThemeService.qml

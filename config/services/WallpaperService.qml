@@ -111,11 +111,6 @@ QtObject {
         root._apply.running = true
     }
 
-    // Kill any hyprpaper so the two don't fight over the same layer surface.
-    property Process _dropHyprpaper: Process {
-        command: ["bash", "-c", "pkill -x hyprpaper 2>/dev/null; true"]
-    }
-
     function ensureDaemon() {
         _daemonProbe.running = true
     }

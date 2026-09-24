@@ -12,3 +12,4 @@ UserMenuPopup 1.0 UserMenuPopup.qml
 WallpaperPopup 1.0 WallpaperPopup.qml
 Dashboard 1.0 Dashboard.qml
 SpotifyPopup 1.0 SpotifyPopup.qml
+ThemePopup 1.0 ThemePopup.qml

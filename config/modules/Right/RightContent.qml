@@ -70,6 +70,13 @@ Row {
         onTriggered: { /* power popup lands with the dashboard */ }
     }
 
+    // ── Theme picker (replaces the rofi theme menu) ─────────────────────────
+    BarTrigger {
+        glyph: "\uf53f"
+        active: ShellState.themeOpen
+        onTriggered: ShellState.toggle("theme")
+    }
+
     // ── Dashboard (calendar / pomodoro / customise) ────────────────────────
     BarTrigger {
         glyph: "\uf00a"
