@@ -245,8 +245,12 @@ PanelWindow {
             Page { name: "network"
                 NetworkPopup { width: parent.width; embedded: true }
             }
-            Page { name: "bluetooth"
-                BluetoothPopup { width: parent.width; embedded: true }
+            Page { name: "bluetooth"; sub: false
+                BluetoothPopup {
+                    width: parent.width
+                    height: Theme.ccHeight
+                    embedded: true
+                }
             }
             Page { name: "audio"
                 AudioPopup { width: parent.width; embedded: true }

@@ -97,7 +97,7 @@ QtObject {
     // Passive widgets (Registry `passive`): shown without closing anything
     // else, and only if the island isn't busy with a widget you opened. The
     // pomodoro alarm may replace a notification, never the other way round.
-    readonly property var _passiveRank: ({ "notification": 1, "pomodoro-alarm": 2 })
+    readonly property var _passiveRank: ({ "notification": 1, "pomodoro-alarm": 2, "alarm-ringing": 3 })
 
     function showPassive(widget) {
         if (root.islandOpen && root.islandWidget !== widget

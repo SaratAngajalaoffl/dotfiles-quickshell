@@ -16,6 +16,8 @@ ShellRoot {
     property var _ipc: Ipc
     // Likewise the polkit agent, which must be registered before any request.
     property var _polkit: PolkitService
+    // Start the alarm scheduler immediately, even before its widget is opened.
+    property var _alarms: AlarmService
 
     Variants {
         model: Quickshell.screens

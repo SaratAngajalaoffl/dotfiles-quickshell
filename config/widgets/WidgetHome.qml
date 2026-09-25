@@ -14,13 +14,14 @@ Item {
 
     property bool active: false
 
-    readonly property int columns: 4
-    readonly property int cell: 92
+    readonly property int columns: 5
+    readonly property int cellWidth: 176
+    readonly property int cellHeight: 88
     readonly property int pad: 14
     readonly property int rows: Math.ceil(Registry.pickable.length / columns)
 
-    implicitWidth:  columns * cell + pad * 2
-    implicitHeight: header.height + 8 + 12 + rows * cell + pad * 2
+    implicitWidth:  columns * cellWidth + pad * 2
+    implicitHeight: header.height + 8 + 12 + rows * cellHeight + pad * 2
 
     onActiveChanged: if (active) {
         grid.currentIndex = 0
@@ -88,8 +89,8 @@ Item {
         anchors { top: header.bottom; left: parent.left; right: parent.right; bottom: parent.bottom }
         anchors.margins: root.pad
         anchors.topMargin: 12
-        cellWidth: root.cell
-        cellHeight: root.cell
+        cellWidth: root.cellWidth
+        cellHeight: root.cellHeight
         interactive: false
         focus: root.active
         keyNavigationWraps: true

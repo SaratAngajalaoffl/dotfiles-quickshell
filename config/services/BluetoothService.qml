@@ -10,6 +10,7 @@ QtObject {
 
     property bool powered: false
     property bool available: true
+    property bool scanning: false
     property var  devices: []          // { mac, name, connected, paired }
     property var  connected: []
 
@@ -100,25 +101,53 @@ QtObject {
     }
 
     // ── Actions ─────────────────────────────────────────────────────────────
+    property string _action: ""
+    property bool _scanStopRequested: false
+
     property Process _act: Process {
-        onExited: root.refresh()
+        onExited: {
+            if (root._action === "scan" && root._scanStopRequested) {
+                root._scanStopRequested = false
+                root.scanning = false
+            }
+            root._action = ""
+            root.refresh()
+        }
     }
 
-    function _run(args) {
+    function _run(args, action) {
+        _action = action || ""
         _act.command = args
         _act.running = false
         _act.running = true
     }
 
     function togglePower() {
-        _run(["bluetoothctl", "power", powered ? "off" : "on"])
+        setPower(!powered)
     }
 
-    function toggleDevice(mac) {
-        var isConn = false
-        for (var i = 0; i < root.connected.length; i++)
-            if (root.connected[i].mac === mac) isConn = true
-        _run(["bluetoothctl", isConn ? "disconnect" : "connect", mac])
+    function setPower(value) {
+        if (!available || powered === value) return
+        if (!value && scanning) {
+            scanning = false
+            _scanStopRequested = true
+        }
+        _run(["bluetoothctl", "power", value ? "on" : "off"])
+    }
+
+    function setScan(value) {
+        if (!powered || scanning === value) return
+        scanning = value
+        _scanStopRequested = !value
+        _run(["bluetoothctl", "scan", value ? "on" : "off"], "scan")
+    }
+
+    function connectDevice(mac) {
+        _run(["bluetoothctl", "connect", mac])
+    }
+
+    function disconnectDevice(mac) {
+        _run(["bluetoothctl", "disconnect", mac])
     }
 
     function pair(mac) {
@@ -126,6 +155,6 @@ QtObject {
     }
 
     function scan() {
-        _run(["bash", "-c", "bluetoothctl --timeout 8 scan on >/dev/null 2>&1"])
+        setScan(true)
     }
 }

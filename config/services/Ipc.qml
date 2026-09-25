@@ -187,6 +187,18 @@ QtObject {
         function dismiss(): string { PomodoroService.dismiss(); return "dismissed" }
     }
 
+    property IpcHandler _alarms: IpcHandler {
+        target: "alarms"
+        function list(): string { return JSON.stringify(AlarmService.alarms) }
+        function add(hour: int, minute: int, repeat: bool): string {
+            var alarm = AlarmService.add(hour, minute, repeat)
+            return alarm ? alarm.id : "failed"
+        }
+        function remove(id: string): string { AlarmService.remove(id); return "removed" }
+        function toggle(id: string): string { AlarmService.toggle(id); return "toggled" }
+        function stop(): string { AlarmService.stop(); return "stopped" }
+    }
+
     // Wallpaper control (diagnostics + scripting).
     property IpcHandler _wallpaper: IpcHandler {
         target: "wallpaper"

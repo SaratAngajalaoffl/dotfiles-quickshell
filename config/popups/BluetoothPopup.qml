@@ -18,12 +18,13 @@ Item {
         id: panel
         embedded: root.embedded
         width: parent.width
+        height: root.height
 
         customHeader: Item {
             width: parent.width
 
             Text {
-                anchors.verticalCenter: parent.verticalCenter
+                anchors { left: parent.left; verticalCenter: parent.verticalCenter }
                 text: "Bluetooth"
                 color: Theme.text
                 font.family: Theme.fontFamily
@@ -31,31 +32,36 @@ Item {
                 font.bold: true
             }
 
-            Row {
+            Toggle {
                 anchors { right: parent.right; verticalCenter: parent.verticalCenter }
-                spacing: 4
-
-                SmallAction {
-                    label: "Scan"
-                    enabled: BluetoothService.powered
-                    onActivated: BluetoothService.scan()
-                }
-
-                IconButton {
-                    glyph: BluetoothService.powered ? "\uf293" : "\uf00d"
-                    size: 28
-                    active: !BluetoothService.powered
-                    onActivated: BluetoothService.togglePower()
-                }
+                enabled: BluetoothService.available
+                checked: BluetoothService.powered
+                onToggled: function (value) { BluetoothService.setPower(value) }
             }
         }
 
-        Column {
+        Item {
+            id: content
             width: parent.width
-            spacing: 8
+            height: Math.max(64, panel.height - panel.padding * 2 - panel.headerHeight)
+
+            SettingRow {
+                id: scanRow
+                anchors { top: parent.top; left: parent.left; right: parent.right }
+                visible: BluetoothService.available
+                label: "Scan for devices"
+                hint: "Find nearby Bluetooth devices"
+                enabled: BluetoothService.powered
+                opacity: BluetoothService.powered ? 1 : 0.45
+
+                Toggle {
+                    checked: BluetoothService.scanning
+                    onToggled: function (value) { BluetoothService.setScan(value) }
+                }
+            }
 
             Text {
-                width: parent.width
+                anchors { top: parent.top; left: parent.left; right: parent.right }
                 visible: !BluetoothService.available
                 text: "No Bluetooth adapter found"
                 color: Theme.subtext0
@@ -63,69 +69,134 @@ Item {
                 font.pixelSize: Theme.fontSize
             }
 
-            Text {
-                width: parent.width
+            Item {
+                anchors {
+                    top: scanRow.bottom; topMargin: 8
+                    left: parent.left; right: parent.right; bottom: parent.bottom
+                }
                 visible: BluetoothService.available && !BluetoothService.powered
-                text: "Bluetooth is off"
-                color: Theme.subtext0
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSize
-            }
 
-            Column {
-                width: parent.width
-                spacing: 2
-                visible: BluetoothService.powered
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 8
 
-                Repeater {
-                    model: BluetoothService.devices
+                    CenteredIcon {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: BluetoothService.glyph
+                        size: 24
+                        color: Theme.overlay1
+                    }
 
-                    delegate: ListRow {
-                        required property var modelData
-                        title: modelData.name || modelData.mac
-                        subtitle: modelData.mac
-                        selected: modelData.connected
-                        trailing: modelData.connected ? "Connected"
-                                : modelData.paired ? "Paired" : "Pair"
-                        glyph: modelData.connected ? "\uf293" : "\uf294"
-                        leadingActive: modelData.connected
-                        onActivated: {
-                            if (modelData.paired) BluetoothService.toggleDevice(modelData.mac)
-                            else BluetoothService.pair(modelData.mac)
-                        }
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "Bluetooth is off"
+                        color: Theme.subtext0
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSize
                     }
                 }
             }
 
-            Text {
-                width: parent.width
+            Column {
+                anchors { top: scanRow.bottom; topMargin: 8; left: parent.left; right: parent.right }
+                spacing: 6
+                visible: BluetoothService.powered && BluetoothService.devices.length > 0
+
+                Repeater {
+                    model: BluetoothService.devices
+                    delegate: DeviceRow { device: modelData }
+                }
+            }
+
+            Item {
+                anchors {
+                    top: scanRow.bottom; topMargin: 8
+                    left: parent.left; right: parent.right; bottom: parent.bottom
+                }
                 visible: BluetoothService.powered && BluetoothService.devices.length === 0
-                text: "No devices found"
-                color: Theme.subtext0
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSize
+
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 8
+
+                    CenteredIcon {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "\uf293"
+                        size: 24
+                        color: Theme.overlay1
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "No Bluetooth Devices Found"
+                        color: Theme.subtext0
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSize
+                    }
+                }
             }
         }
     }
 
-    component SmallAction: Rectangle {
-        id: act
-        property string label
-        property bool enabled: true
-        signal activated()
-        width: labelText.width + 18
-        height: 24
-        radius: height / 2
-        color: actHover.hovered ? Theme.hover : "transparent"
+    // A device row follows the control-center card language: a quiet fill,
+    // a single line of information, and the action on the right.
+    component DeviceRow: Rectangle {
+        id: deviceRow
+
+        property var device
+
+        width: parent ? parent.width : 0
+        height: 36
+        radius: Theme.cornerRadiusSmall + 2
+        color: device.connected
+             ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.14)
+             : deviceRowHover.hovered
+             ? Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.08)
+             : Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.045)
+        border.width: 1
+        border.color: device.connected
+                      ? Qt.rgba(Theme.accent.r, Theme.accent.g, Theme.accent.b, 0.35)
+                      : Qt.rgba(Theme.text.r, Theme.text.g, Theme.text.b, 0.06)
+
+        Behavior on color { ColorAnimation { duration: Theme.animFast } }
+
         Text {
-            id: labelText
-            anchors.centerIn: parent
-            text: act.label
-            color: act.enabled ? Theme.subtext0 : Theme.inactive
+            anchors {
+                left: parent.left; leftMargin: 14
+                right: action.left; rightMargin: 12
+                verticalCenter: parent.verticalCenter
+            }
+            text: deviceRow.device.name || deviceRow.device.mac
+            color: Theme.text
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSize
+            font.bold: deviceRow.device.connected
+            elide: Text.ElideRight
+        }
+
+        Text {
+            id: action
+            anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter }
+            text: deviceRow.device.connected ? "Connected"
+                : deviceRow.device.paired ? "Connect" : "Pair"
+            color: Theme.accent
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall
         }
-        HoverHandler { id: actHover; cursorShape: Qt.PointingHandCursor }
-        TapHandler { onTapped: if (act.enabled) act.activated() }
+
+        HoverHandler {
+            id: deviceRowHover
+            cursorShape: deviceRow.device.connected ? Qt.ArrowCursor : Qt.PointingHandCursor
+        }
+        TapHandler {
+            onTapped: {
+                if (deviceRow.device.connected)
+                    BluetoothService.disconnectDevice(deviceRow.device.mac)
+                else if (deviceRow.device.paired)
+                    BluetoothService.connectDevice(deviceRow.device.mac)
+                else
+                    BluetoothService.pair(deviceRow.device.mac)
+            }
+        }
     }
 }
