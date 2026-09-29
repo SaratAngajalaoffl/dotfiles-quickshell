@@ -46,16 +46,35 @@ QtObject {
             onStreamFinished: {
                 try {
                     var list = JSON.parse(text).map(function (m) {
+                        var w = m.width, h = m.height, r = m.refreshRate || 0
+                        // A disabled monitor reports no size: take its
+                        // preferred mode, so it can still be drawn.
+                        if (m.disabled && (!w || !h)) {
+                            var mode = /^(\d+)x(\d+)@([\d.]+)/.exec((m.availableModes || [])[0] || "")
+                            if (mode) { w = +mode[1]; h = +mode[2]; r = +mode[3] }
+                        }
                         return {
                             name: m.name,
                             description: m.description || "",
-                            width: m.width,
-                            height: m.height,
+                            width: w,
+                            height: h,
                             x: m.x,
                             y: m.y,
-                            refresh: Math.round(m.refreshRate || 0),
+                            refresh: Math.round(r),
                             disabled: !!m.disabled
                         }
+                    })
+                    // ...and no position either (Hyprland parks it at -1,0):
+                    // put it beside the ones that are on — on their left if
+                    // there is room, else past their right edge.
+                    var on = list.filter(function (m) { return !m.disabled })
+                    var left = on.length ? Math.min.apply(null, on.map(function (m) { return m.x })) : 0
+                    var right = on.length ? Math.max.apply(null, on.map(function (m) { return m.x + m.width })) : 0
+                    list.forEach(function (m) {
+                        if (!m.disabled || m.x >= 0) return
+                        if (left >= m.width) { m.x = left - m.width; left = m.x }
+                        else { m.x = right; right += m.width }
+                        m.y = 0
                     })
                     list.sort(function (a, b) { return a.x - b.x || a.y - b.y })
                     root.monitors = list
