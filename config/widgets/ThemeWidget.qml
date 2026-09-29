@@ -7,9 +7,11 @@
 // by tag too, and combine.
 //
 // Keys:
-//   h j k l / arrows   move            Return   apply
+//   h l / arrows       scroll (wraps)  Return   apply
+//   k / Up             to search
 //   /                  search          t        edit tags
 //   g / G              first / last    Esc      close
+//   wheel              scroll
 import QtQuick
 import Quickshell.Widgets
 import "../theme"
@@ -26,7 +28,6 @@ Item {
     readonly property int cardW: 272
     readonly property int thumbH: 153           // 16:9
     readonly property int cardH: thumbH + 64
-    readonly property int rows: 2
     readonly property int pad: 18
 
     implicitWidth: columns * cardW + pad * 2
@@ -86,7 +87,7 @@ Item {
         for (var i = 0; i < root.shown.length; i++)
             if (root.shown[i].id === WallpaperLibrary.current) {
                 grid.currentIndex = i
-                grid.positionViewAtIndex(i, GridView.Contain)
+                grid.positionViewAtIndex(i, PathView.Center)
                 return
             }
         grid.currentIndex = 0
@@ -280,41 +281,55 @@ Item {
         }
 
         // ── Grid ────────────────────────────────────────────────────────────
-        GridView {
+        // One row that wraps around forever: the current card stays centred
+        // and the ones either side slide past it. `slots` cards sit on the
+        // path (odd, so one is centred); with fewer wallpapers than that it
+        // just shows them all.
+        PathView {
             id: grid
 
+            readonly property int slots: Math.min(5, Math.max(1, count))
+
             width: root.columns * root.cardW
-            height: root.rows * root.cardH + root.cardH / 3     // a peek of the next row
+            height: root.cardH
             anchors.horizontalCenter: parent.horizontalCenter
-            cellWidth: root.cardW
-            cellHeight: root.cardH
             clip: true
             model: root.shown
-            boundsBehavior: Flickable.StopAtBounds
-            highlightMoveDuration: 140
-            cacheBuffer: root.cardH * 2
+            pathItemCount: slots
+            preferredHighlightBegin: 0.5
+            preferredHighlightEnd: 0.5
+            highlightRangeMode: PathView.StrictlyEnforceRange
+            highlightMoveDuration: 200
+            snapMode: PathView.SnapOneItem
             focus: true
 
-            highlight: Rectangle {
-                width: root.cardW
-                height: root.cardH
-                radius: 18
-                color: "transparent"
-                border.width: 2
-                border.color: Theme.accent
-                z: 2
+            path: Path {
+                startX: grid.width / 2 - grid.slots * root.cardW / 2
+                startY: grid.height / 2
+                PathLine {
+                    x: grid.width / 2 + grid.slots * root.cardW / 2
+                    y: grid.height / 2
+                }
+            }
+
+            // Mouse wheel / trackpad steps one card at a time.
+            WheelHandler {
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                onWheel: function (event) {
+                    var d = Math.abs(event.angleDelta.x) > Math.abs(event.angleDelta.y)
+                             ? event.angleDelta.x : event.angleDelta.y
+                    if (d < 0) grid.incrementCurrentIndex()
+                    else if (d > 0) grid.decrementCurrentIndex()
+                }
             }
 
             Keys.onPressed: function (event) {
                 var k = event.key
                 var shift = event.modifiers & Qt.ShiftModifier
-                if (k === Qt.Key_H || k === Qt.Key_Left)       grid.moveCurrentIndexLeft()
-                else if (k === Qt.Key_L || k === Qt.Key_Right) grid.moveCurrentIndexRight()
-                else if (k === Qt.Key_J || k === Qt.Key_Down)  grid.moveCurrentIndexDown()
-                else if (k === Qt.Key_K || k === Qt.Key_Up) {
-                    if (grid.currentIndex < root.columns) search.forceActiveFocus()
-                    else grid.moveCurrentIndexUp()
-                }
+                if (k === Qt.Key_H || k === Qt.Key_Left)       grid.decrementCurrentIndex()
+                else if (k === Qt.Key_L || k === Qt.Key_Right) grid.incrementCurrentIndex()
+                else if (k === Qt.Key_K || k === Qt.Key_Up)    search.forceActiveFocus()
+                else if (k === Qt.Key_J || k === Qt.Key_Down)  { /* single row: nothing below */ }
                 else if (k === Qt.Key_G && shift)              grid.currentIndex = grid.count - 1
                 else if (k === Qt.Key_G)                       grid.currentIndex = 0
                 else if (k === Qt.Key_Return || k === Qt.Key_Enter) root.applySelected()
@@ -335,6 +350,17 @@ Item {
 
                 width: root.cardW
                 height: root.cardH
+
+                // Selection ring.
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 18
+                    color: "transparent"
+                    border.width: 2
+                    border.color: Theme.accent
+                    visible: card.PathView.isCurrentItem
+                    z: 2
+                }
 
                 Rectangle {
                     anchors { fill: parent; margins: 6 }
@@ -468,7 +494,6 @@ Item {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onPositionChanged: if (!root.editing) grid.currentIndex = card.index
                     onClicked: { grid.currentIndex = card.index; root.applySelected() }
                 }
             }

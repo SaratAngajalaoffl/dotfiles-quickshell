@@ -96,6 +96,15 @@ Item {
         keyNavigationWraps: true
         model: Registry.pickable
 
+        Keys.onPressed: function (event) {
+            var k = event.key
+            if (k === Qt.Key_H)      moveCurrentIndexLeft()
+            else if (k === Qt.Key_L) moveCurrentIndexRight()
+            else if (k === Qt.Key_J) moveCurrentIndexDown()
+            else if (k === Qt.Key_K) moveCurrentIndexUp()
+            else return
+            event.accepted = true
+        }
         Keys.onReturnPressed: ShellState.openWidget(Registry.pickable[currentIndex].id, true)
         Keys.onEnterPressed:  ShellState.openWidget(Registry.pickable[currentIndex].id, true)
 

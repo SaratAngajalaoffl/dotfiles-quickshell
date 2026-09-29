@@ -22,7 +22,9 @@ widget), so one source failing never hides another.
 The 7-day Bifrost queries are slow (~15 s each on a busy week: the server
 scans every log row, and rankings also computes the previous week for
 trends), so its three calls run in parallel with a generous timeout, and the
-shell fetches it on its own, less often, so Claude never waits on it.
+shell fetches it on its own, less often, so Claude never waits on it. Each
+good result is also written to ~/.cache/quickshell/bifrost.json, which the
+shell loads on start instead of waiting for the first fetch.
 
 Usage: agent-usage.py [claude] [opencode] [bifrost]   (default: all)
 
@@ -44,6 +46,8 @@ CLAUDE_ACCOUNT = os.path.join(HOME, ".local", "bin", "claude-account")
 BIFROST_URL = os.environ.get("BIFROST_URL", "http://10.43.226.225:8080").rstrip("/")
 RUNTIME = os.environ.get("XDG_RUNTIME_DIR") or "/tmp"
 TOKEN_FILE = os.path.join(RUNTIME, "quickshell", "bifrost-token")
+CACHE_DIR = os.environ.get("XDG_CACHE_HOME") or os.path.join(HOME, ".cache")
+BIFROST_CACHE = os.path.join(CACHE_DIR, "quickshell", "bifrost.json")
 TIMEOUT = 8
 BIFROST_TIMEOUT = 45
 
@@ -209,4 +213,15 @@ if __name__ == "__main__":
     out = {"fetched_at": dt.datetime.now().astimezone().isoformat()}
     for name in which:
         out[name] = sources[name]()
+    # Bifrost is slow, so the shell keeps its last good result on disk and
+    # shows it straight away on the next start.
+    if "bifrost" in which and out["bifrost"].get("ok"):
+        try:
+            os.makedirs(os.path.dirname(BIFROST_CACHE), exist_ok=True)
+            tmp = BIFROST_CACHE + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump({"fetched_at": out["fetched_at"], "bifrost": out["bifrost"]}, f)
+            os.replace(tmp, BIFROST_CACHE)
+        except OSError:
+            pass
     json.dump(out, sys.stdout)

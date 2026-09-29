@@ -2,7 +2,8 @@
 // settings/, built from Section (nestable), SliderRow, ToggleRow and
 // ChoiceRow. Adding a tab = a new page file + an entry in `tabs`.
 //
-// Tab / Shift+Tab (or Ctrl+PageDown / PageUp) switch tabs.
+// Tab / Shift+Tab (or Ctrl+PageDown / PageUp, or h / l) switch tabs;
+// j / k scroll the page.
 import QtQuick
 import "../theme"
 import "../state"
@@ -42,6 +43,17 @@ Item {
             event.accepted = true
         } else if (event.key === Qt.Key_Backtab || (ctrl && event.key === Qt.Key_PageUp)) {
             root.select((root.current - 1 + root.tabs.length) % root.tabs.length)
+            event.accepted = true
+        } else if (event.key === Qt.Key_L) {
+            root.select((root.current + 1) % root.tabs.length)
+            event.accepted = true
+        } else if (event.key === Qt.Key_H) {
+            root.select((root.current - 1 + root.tabs.length) % root.tabs.length)
+            event.accepted = true
+        } else if (event.key === Qt.Key_J || event.key === Qt.Key_K) {
+            var max = Math.max(0, flick.contentHeight - flick.height)
+            var dy = event.key === Qt.Key_J ? 60 : -60
+            flick.contentY = Math.max(0, Math.min(max, flick.contentY + dy))
             event.accepted = true
         }
     }

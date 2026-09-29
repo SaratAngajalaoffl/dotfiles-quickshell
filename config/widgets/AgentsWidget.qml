@@ -1,7 +1,7 @@
 // Agents: usage per tab — the Claude subscription, the OpenCode Go
 // subscription, and what went through the Bifrost gateway. Data from
 // AgentUsageService; the subscriptions refresh every minute while this is
-// open, Bifrost every five. R or the refresh button fetches now; Tab /
+// open, Bifrost every 30 min (cached on disk). R or the refresh button fetches now; Tab /
 // Shift+Tab switch tabs. On the Claude tab, Left / Right pick an account and
 // Enter switches Claude Code to it (or saves it, when it's a new one).
 import QtQuick
@@ -59,6 +59,20 @@ Item {
     }))
     function select(i) { ShellState.agentsTab = root.tabs[i].id }
 
+    // "chandrasarat74@gmail.com" -> "chan•••••••74@gmail.com": enough to tell
+    // accounts apart, not enough to read off the screen.
+    function maskEmail(email) {
+        if (!email) return ""
+        var at = email.lastIndexOf("@")
+        if (at < 1) return email
+        var user = email.slice(0, at)
+        if (user.length <= 3) return user.charAt(0) + "•••" + email.slice(at)
+        var head = Math.min(4, Math.ceil(user.length / 3))
+        var tail = user.length > 8 ? 2 : 0
+        return user.slice(0, head) + "•".repeat(user.length - head - tail)
+               + user.slice(user.length - tail) + email.slice(at)
+    }
+
     readonly property int pad: 18
 
     implicitWidth: 580
@@ -76,17 +90,18 @@ Item {
             AgentUsageService.refresh()
             event.accepted = true
         } else if (root.tabs[root.current].id === "claude"
-                   && (event.key === Qt.Key_Left || event.key === Qt.Key_Right)) {
-            root.pickAccount(event.key === Qt.Key_Right ? 1 : -1)
+                   && (event.key === Qt.Key_Left || event.key === Qt.Key_Right
+                       || event.key === Qt.Key_H || event.key === Qt.Key_L)) {
+            root.pickAccount(event.key === Qt.Key_Right || event.key === Qt.Key_L ? 1 : -1)
             event.accepted = true
         } else if (root.tabs[root.current].id === "claude"
                    && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
             root.accountButton()
             event.accepted = true
-        } else if (event.key === Qt.Key_Tab) {
+        } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_J) {
             root.select((root.current + 1) % root.tabs.length)
             event.accepted = true
-        } else if (event.key === Qt.Key_Backtab) {
+        } else if (event.key === Qt.Key_Backtab || event.key === Qt.Key_K) {
             root.select((root.current - 1 + root.tabs.length) % root.tabs.length)
             event.accepted = true
         }
@@ -418,7 +433,7 @@ Item {
                     glyphColor: "#d97757"
                     title: "Claude"
                     chip: root.account && root.account.plan ? root.account.plan.charAt(0).toUpperCase() + root.account.plan.slice(1) : ""
-                    note: root.account ? root.account.email : ""
+                    note: root.account ? root.maskEmail(root.account.email) : ""
                 }
 
                 Text {

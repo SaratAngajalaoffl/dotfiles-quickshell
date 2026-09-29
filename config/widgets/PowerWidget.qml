@@ -12,6 +12,7 @@ Item {
 
     property bool active: false
     property string confirming: ""
+    property int selected: 0
     readonly property int pad: 18
     readonly property var actions: [{
         "id": "lock",
@@ -45,10 +46,28 @@ Item {
 
     implicitWidth: 500
     implicitHeight: header.height + 16 + tiles.height + pad * 2
+    focus: active
     onActiveChanged: {
-        if (!active) {
+        if (active)
+            root.forceActiveFocus();
+        else
             root.confirming = "";
+    }
+    Keys.onPressed: function(event) {
+        var k = event.key;
+        var n = root.actions.length;
+        if (k === Qt.Key_H || k === Qt.Key_Left) {
+            root.selected = (root.selected + n - 1) % n;
+            root.confirming = "";
+        } else if (k === Qt.Key_L || k === Qt.Key_Right) {
+            root.selected = (root.selected + 1) % n;
+            root.confirming = "";
+        } else if (k === Qt.Key_Return || k === Qt.Key_Enter) {
+            root.invoke(root.actions[root.selected].id);
+        } else {
+            return ;
         }
+        event.accepted = true;
     }
 
     Column {
@@ -84,7 +103,7 @@ Item {
             }
 
             Text {
-                text: root.confirming ? "Click again to confirm" : "Session actions"
+                text: root.confirming ? "Press Enter again to confirm" : "Session actions"
                 color: root.confirming ? Theme.success : Theme.subtext0
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeSmall
@@ -112,15 +131,17 @@ Item {
                     id: tile
 
                     required property var modelData
+                    required property int index
                     readonly property bool confirming: root.confirming === modelData.id
+                    readonly property bool selected: root.selected === index
                     readonly property bool otherConfirming: root.confirming !== "" && !confirming
 
                     width: (tiles.width - tiles.spacing * 3) / 4
                     height: 82
                     radius: 20
                     color: confirming ? Qt.rgba(Theme.success.r, Theme.success.g, Theme.success.b, 0.8) : otherConfirming ? Theme.surface : tileHover.hovered ? Theme.hover : Theme.surface
-                    border.width: confirming ? 2 : 0
-                    border.color: Theme.red
+                    border.width: confirming || selected ? 2 : 0
+                    border.color: confirming ? Theme.red : Theme.mauve
                     opacity: otherConfirming ? 0.55 : 1
 
                     Column {
@@ -152,7 +173,10 @@ Item {
                     }
 
                     TapHandler {
-                        onTapped: root.invoke(tile.modelData.id)
+                        onTapped: {
+                            root.selected = tile.index;
+                            root.invoke(tile.modelData.id);
+                        }
                     }
 
                     Behavior on color {
