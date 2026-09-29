@@ -16,6 +16,7 @@ QtObject {
     property bool networkOpen:       false
     property bool spotifyOpen:       false
     property bool lightsOpen:        false
+    property bool vpnOpen:           false
     property bool controlCenterOpen: false
 
     // Which control-center page is showing: "main" or one of the _ccPages.
@@ -52,6 +53,7 @@ QtObject {
         network:       "networkOpen",
         spotify:       "spotifyOpen",
         lights:        "lightsOpen",
+        vpn:           "vpnOpen",
         controlCenter: "controlCenterOpen",
         island:        "islandOpen"
     })
@@ -67,6 +69,7 @@ QtObject {
         audio:         "audio",
         spotify:       "spotify",
         lights:        "lights",
+        vpn:           "vpn",
         notifications: "main"
     })
 

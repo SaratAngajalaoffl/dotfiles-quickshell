@@ -15,27 +15,41 @@ Row {
     required property var screen
 
     spacing: Theme.wsSpacing
-    // Show a fixed count of pills like waybar did (persistent_workspaces: 5),
-    // plus any workspace that actually exists.
-    property int persistentCount: 5
 
     readonly property var _live: HyprlandService.workspacesFor(root.screen)
 
-    // Merge persistent 1..N with live workspaces, de-duplicated, sorted.
+    // Workspaces assigned to this monitor by rule (settings override wins).
+    readonly property var _assigned: {
+        var out = []
+        var name = root.screen ? root.screen.name : ""
+        var rules = MonitorService.workspaceRules
+        var over = SettingsService.workspaceMonitors
+        for (var k in rules) {
+            if ((over[k] || rules[k]) === name)
+                out.push(parseInt(k))
+        }
+        for (var k2 in over) {
+            if (over[k2] === name && out.indexOf(parseInt(k2)) === -1)
+                out.push(parseInt(k2))
+        }
+        return out
+    }
+
+    // Only this monitor's workspaces: everything live on it, plus its lowest
+    // assigned workspace that isn't live yet so there is always somewhere to go.
     readonly property var _ids: {
         var seen = ({})
         var out = []
-        for (var i = 1; i <= root.persistentCount; i++) {
-            seen[i] = true
-            out.push(i)
-        }
         for (var j = 0; j < _live.length; j++) {
-            var id = _live[j].id
-            if (!seen[id]) {
-                seen[id] = true
-                out.push(id)
-            }
+            seen[_live[j].id] = true
+            out.push(_live[j].id)
         }
+        var spare = _assigned.filter(function (id) { return !seen[id] })
+        spare.sort(function (a, b) { return a - b })
+        if (spare.length > 0)
+            out.push(spare[0])
+        if (out.length === 0)
+            out.push(1)
         out.sort(function (a, b) { return a - b })
         return out
     }
@@ -45,6 +59,12 @@ Row {
             if (_live[i].id === id)
                 return _live[i]
         return null
+    }
+
+    function _go(id) {
+        // Lua parser: legacy "workspace N" strings are rejected. focus() also
+        // moves focus to the owning monitor, so this works from any bar.
+        Hyprland.dispatch('hl.dsp.focus({ workspace = "' + id + '" })')
     }
 
     Repeater {
@@ -61,13 +81,14 @@ Row {
 
             width: isActive ? Theme.wsActiveWidth : Theme.wsDotSize
             height: Theme.wsDotSize
-            radius: Theme.wsRadius
+            radius: 4
             anchors.verticalCenter: parent.verticalCenter
 
             color: isUrgent   ? Theme.wsUrgent
                  : isActive   ? Theme.wsActive
                  : isOccupied ? Theme.wsOccupied
                  : Theme.wsEmpty
+            opacity: hover.hovered && !isActive ? 0.75 : 1
 
             Behavior on width {
                 NumberAnimation { duration: Theme.animDuration; easing.type: Easing.OutCubic }
@@ -82,21 +103,22 @@ Row {
             }
 
             TapHandler {
-                onTapped: {
-                    if (pill.ws)
-                        pill.ws.activate()
-                    else
-                        Hyprland.dispatch("workspace " + pill.modelData)
-                }
+                onTapped: root._go(pill.modelData)
             }
+        }
+    }
 
-            // Scroll to cycle workspaces, same as waybar's scroll behaviour.
-            WheelHandler {
-                onWheel: function (event) {
-                    var delta = event.angleDelta.y > 0 ? -1 : 1
-                    Hyprland.dispatch("workspace e" + (delta > 0 ? "+" : "-") + "1")
-                }
+    // Scroll cycles through this monitor's own workspaces.
+    WheelHandler {
+        onWheel: function (event) {
+            var ids = root._ids
+            var cur = 0
+            for (var i = 0; i < ids.length; i++) {
+                var w = root._wsFor(ids[i])
+                if (w && w.active) { cur = i; break }
             }
+            var step = event.angleDelta.y > 0 ? -1 : 1
+            root._go(ids[(cur + step + ids.length) % ids.length])
         }
     }
 }

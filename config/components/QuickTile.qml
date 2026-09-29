@@ -8,6 +8,7 @@ Rectangle {
     id: tile
 
     property string glyph
+    property bool spinning: false      // rotate the glyph, e.g. while connecting
     property string title
     property string subtitle
     property bool   active: false
@@ -46,9 +47,18 @@ Rectangle {
 
         CenteredIcon {
             anchors.centerIn: parent
+            id: tileIcon
             text: tile.glyph
             color: tile.ink
             size: 16
+
+            RotationAnimation on rotation {
+                running: tile.spinning
+                from: 0; to: 360
+                duration: 900
+                loops: Animation.Infinite
+                onRunningChanged: if (!running) tileIcon.rotation = 0
+            }
         }
 
         HoverHandler { id: bubbleHover }

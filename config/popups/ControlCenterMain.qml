@@ -148,6 +148,26 @@ Item {
             }
         }
 
+        QuickTile {
+            width: parent.width
+            glyph: NetworkService.vpnPending !== "" ? "\uf110" : "\uf023"   // spinner : lock
+            title: "VPN"
+            spinning: NetworkService.vpnPending !== ""
+            subtitle: {
+                if (NetworkService.vpnPending !== "")
+                    return NetworkService.vpnPendingUp ? "Connecting…" : "Disconnecting…"
+                if (NetworkService.vpns.length === 0) return "No saved VPNs"
+                var a = NetworkService.vpns.filter(function (v) { return v.active })
+                if (a.length === 0) return "Off"
+                return a[0].name + (a.length > 1 ? " +" + (a.length - 1) : "")
+            }
+            active: NetworkService.vpnActive
+            onToggled: NetworkService.toggleAnyVpn()
+            onOpened: ShellState.showPage("vpn")
+        }
+
+        SpotifyCard { width: parent.width }
+
         // ── Volume ──────────────────────────────────────────────────────────
         PillSlider {
             width: parent.width
@@ -158,8 +178,6 @@ Item {
             onMoved: function (v) { AudioService.setVolume(v) }
             onGlyphClicked: AudioService.toggleMute()
         }
-
-        SpotifyCard { width: parent.width }
 
         Rectangle {
             width: parent.width

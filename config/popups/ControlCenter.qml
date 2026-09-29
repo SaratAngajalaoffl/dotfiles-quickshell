@@ -261,6 +261,9 @@ PanelWindow {
             Page { name: "lights"
                 LightsPopup { width: parent.width; embedded: true }
             }
+            Page { name: "vpn"
+                VpnPopup { width: parent.width; embedded: true }
+            }
         }
     }
 

@@ -5,5 +5,6 @@ NetworkPopup 1.0 NetworkPopup.qml
 BluetoothPopup 1.0 BluetoothPopup.qml
 SpotifyPopup 1.0 SpotifyPopup.qml
 LightsPopup 1.0 LightsPopup.qml
+VpnPopup 1.0 VpnPopup.qml
 ControlCenter 1.0 ControlCenter.qml
 ControlCenterMain 1.0 ControlCenterMain.qml
