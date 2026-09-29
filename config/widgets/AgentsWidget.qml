@@ -59,7 +59,7 @@ Item {
     }))
     function select(i) { ShellState.agentsTab = root.tabs[i].id }
 
-    // "chandrasarat74@gmail.com" -> "chan•••••••74@gmail.com": enough to tell
+    // "johnsmith99@example.com" -> "john•••••99@example.com": enough to tell
     // accounts apart, not enough to read off the screen.
     function maskEmail(email) {
         if (!email) return ""
