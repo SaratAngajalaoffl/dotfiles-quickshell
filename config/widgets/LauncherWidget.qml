@@ -46,7 +46,9 @@ Item {
     // Fresh search every time it opens.
     onActiveChanged: {
         if (!active) return
-        if (!AppService.loaded) AppService.load()
+        // Rescan on every open so newly installed apps show up; the list
+        // refreshes in place when the scan finishes (onAppsChanged).
+        AppService.load()
         root._animate = false
         input.text = ""
         root._sync()

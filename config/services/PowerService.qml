@@ -2,7 +2,7 @@
 
 // Lock and logout use the same direct commands as the Hyprland config:
 // hyprlock owns the lock screen, while Hyprland's exit dispatcher ends the
-// session. Reboot and power off go through loginctl, which applies the desktop
+// session (Lua config: the legacy `dispatch exit` form no longer works). Reboot and power off go through loginctl, which applies the desktop
 // session policy and can show polkit.
 pragma Singleton
 import QtQuick
@@ -22,7 +22,7 @@ QtObject {
     property Process _logout
 
     _logout: Process {
-        command: ["hyprctl", "dispatch", "exit"]
+        command: ["hyprctl", "dispatch", "hl.dsp.exit()"]
     }
 
     property Process _reboot
