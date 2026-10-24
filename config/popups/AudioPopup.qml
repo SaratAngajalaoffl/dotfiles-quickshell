@@ -152,6 +152,25 @@ Item {
                 }
             }
 
+            // Input device picker
+            Column {
+                width: parent.width
+                spacing: 2
+
+                Repeater {
+                    model: AudioService.sources
+
+                    delegate: ListRow {
+                        required property var modelData
+                        title: modelData.description || modelData.name || "Unknown"
+                        glyph: ""
+                        leadingActive: modelData === AudioService.source
+                        selected: modelData === AudioService.source
+                        onActivated: AudioService.setDefaultSource(modelData)
+                    }
+                }
+            }
+
             // ── Applications ────────────────────────────────────────────────
             Column {
                 width: parent.width
