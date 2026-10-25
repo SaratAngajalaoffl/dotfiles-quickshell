@@ -89,8 +89,11 @@ QtObject {
         // passes through unchanged and awk does not interpret — the whole
         // program then collapses to one useless line, yielding zero apps.
         // Single quotes preserve the newlines literally.
-        return "find " + parts.join(" ") + " -maxdepth 1 -name '*.desktop' -type f 2>/dev/null"
-             + " | sort | xargs -r awk '" + awk + "'"
+        // NUL-delimit the file list: desktop files can have spaces in their
+        // names (e.g. Steam games), and a whitespace-split xargs makes awk
+        // fatally fail on the fragments, discarding every app.
+        return "find " + parts.join(" ") + " -maxdepth 1 -name '*.desktop' -type f -print0 2>/dev/null"
+             + " | sort -z | xargs -0 -r awk '" + awk + "'"
     }
 
     function _parse(raw) {
